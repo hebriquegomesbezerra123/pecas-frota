@@ -619,13 +619,24 @@
                  style="min-height:42px;max-height:110px;overflow-y:auto;background:#fff"></div>
           </div>
           <div class="col-12">
-            <label class="form-label">Fotos</label>
-            <label class="upload-zone w-100" onclick="document.getElementById('npFotoInput').click()">
+            <label class="form-label d-flex align-items-center gap-2">
+              Fotos
+              <span id="iaStatusBadge" style="display:none" class="badge rounded-pill" style="font-size:.7rem"></span>
+            </label>
+            <label class="upload-zone w-100" id="npUploadZone" onclick="document.getElementById('npFotoInput').click()">
               <i class="bi bi-camera fs-4 text-muted d-block mb-1"></i>
               <span class="text-muted small">Clique para selecionar fotos (JPG, PNG)</span>
               <input type="file" id="npFotoInput" accept="image/*" multiple onchange="previewNpFotos(this)">
             </label>
             <div id="uploadPreview"></div>
+            <div id="iaBtnWrap" class="mt-2" style="display:none">
+              <button type="button" class="btn btn-sm w-100 fw-semibold" id="btnAnalisarIA"
+                style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none"
+                onclick="analisarComIA()">
+                <i class="bi bi-stars me-1"></i>Analisar com IA — preencher automaticamente
+              </button>
+            </div>
+            <div id="iaResultado" class="mt-2" style="display:none"></div>
           </div>
           <div class="col-12">
             <label class="form-label">Descrição</label>
@@ -1041,6 +1052,73 @@ function previewNpFotos(input){
     img.src=url; img.style.cssText='width:60px;height:46px;object-fit:cover;border-radius:4px';
     wrap.appendChild(img);
   });
+  // mostra botão IA se há pelo menos 1 arquivo
+  document.getElementById('iaBtnWrap').style.display=input.files.length?'':'none';
+  document.getElementById('iaResultado').style.display='none';
+}
+
+async function analisarComIA(){
+  const input=document.getElementById('npFotoInput');
+  if(!input.files.length) return;
+  const btn=document.getElementById('btnAnalisarIA');
+  const res=document.getElementById('iaResultado');
+
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner-border spinner-border-sm me-2"></span>Analisando com Gemini…';
+  res.style.display='none';
+
+  const fd=new FormData(); fd.append('foto', input.files[0]);
+  try {
+    const r=await fetch('/api/analisar-foto',{method:'POST',body:fd});
+    const d=await r.json();
+    if(!d.success){ throw new Error(d.error||'Erro desconhecido'); }
+
+    const p=d.dados;
+    // Preenche campos do formulário
+    if(p.nome)        document.getElementById('npNome').value=p.nome;
+    if(p.codigo)      document.getElementById('npCodigo').value=p.codigo;
+    if(p.fabricante)  document.getElementById('npFabricante').value=p.fabricante;
+    if(p.categoria)   document.getElementById('npCategoria').value=p.categoria;
+    if(p.descricao)   document.getElementById('npDescricao').value=p.descricao;
+    // Marca veículos sugeridos
+    if(p.veiculos_sugeridos&&p.veiculos_sugeridos.length){
+      document.querySelectorAll('#npVeiculosCheck input[type=checkbox]').forEach(cb=>{
+        const frotaEntry=allFrota.find(v=>v.placa===cb.value);
+        if(frotaEntry && p.veiculos_sugeridos.some(s=>frotaEntry.modelo.toLowerCase().includes(s.toLowerCase())||s.toLowerCase().includes(frotaEntry.modelo.toLowerCase())))
+          cb.checked=true;
+      });
+    }
+    // Salva preço estimado no input de referência (após salvar a peça ele será persistido)
+    if(p.preco_estimado && p.preco_estimado>0){
+      // guarda para usar no submit
+      document.getElementById('npFotoInput').dataset.precoIa=p.preco_estimado;
+    }
+
+    // Mostra resumo
+    const fmt=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const veicsStr=(p.veiculos_sugeridos||[]).join(', ')||'—';
+    res.style.display='';
+    res.innerHTML=`<div class="alert alert-success border-0 py-2 px-3 mb-0" style="background:#f0fdf4;border-left:4px solid #22c55e!important;border-radius:6px">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <i class="bi bi-stars" style="color:#7c3aed"></i>
+        <span class="fw-semibold small">IA identificou:</span>
+      </div>
+      <div class="small lh-lg">
+        <b>Peça:</b> ${p.nome||'—'}<br>
+        <b>Categoria:</b> ${p.categoria||'—'} &nbsp;|&nbsp; <b>Fabricante:</b> ${p.fabricante||'—'}<br>
+        <b>Preço estimado:</b> ${p.preco_estimado>0?fmt(p.preco_estimado):'—'}<br>
+        <b>Veículos sugeridos:</b> ${veicsStr}
+      </div>
+    </div>`;
+
+    btn.innerHTML='<i class="bi bi-check2-circle me-1"></i>Analisado! Revise os campos abaixo';
+    btn.style.background='linear-gradient(135deg,#059669,#047857)';
+  } catch(e){
+    res.style.display='';
+    res.innerHTML=`<div class="alert alert-danger border-0 py-2 px-3 mb-0 small"><i class="bi bi-exclamation-triangle me-1"></i>${e.message}</div>`;
+    btn.disabled=false;
+    btn.innerHTML='<i class="bi bi-stars me-1"></i>Tentar novamente';
+  }
 }
 function openNovaPecaModal(){
   ['npNome','npCodigo','npFabricante','npDescricao','npObs'].forEach(id=>document.getElementById(id).value='');
@@ -1049,6 +1127,12 @@ function openNovaPecaModal(){
   document.getElementById('npPendente').checked=false;
   document.getElementById('uploadPreview').innerHTML='';
   document.getElementById('npFotoInput').value='';
+  delete document.getElementById('npFotoInput').dataset.precoIa;
+  document.getElementById('iaBtnWrap').style.display='none';
+  document.getElementById('iaResultado').style.display='none';
+  const btnIA=document.getElementById('btnAnalisarIA');
+  btnIA.disabled=false; btnIA.style.background='linear-gradient(135deg,#4f46e5,#7c3aed)';
+  btnIA.innerHTML='<i class="bi bi-stars me-1"></i>Analisar com IA — preencher automaticamente';
   const wrap=document.getElementById('npVeiculosCheck'); wrap.innerHTML='';
   allFrota.forEach(v=>{
     const lbl=document.createElement('label'); lbl.className='d-flex align-items-center gap-1 small'; lbl.style.cursor='pointer';
@@ -1065,11 +1149,13 @@ async function submitNovaPeca(){
   const veics=[...document.querySelectorAll('#npVeiculosCheck input:checked')].map(el=>{
     const f=allFrota.find(v=>v.placa===el.value); return f?`${f.placa} ${f.modelo}`:el.value;
   });
+  const precoIa=parseFloat(document.getElementById('npFotoInput').dataset.precoIa||'0')||0;
   const payload={nome,codigo:document.getElementById('npCodigo').value.trim(),
     fabricante:document.getElementById('npFabricante').value.trim(),categoria:cat,
     descricao:document.getElementById('npDescricao').value.trim(),observacoes:document.getElementById('npObs').value.trim(),
     veiculos_compativeis:veics,quantidade:parseInt(document.getElementById('npQtd').value)||0,
-    pendente_analise:document.getElementById('npPendente').checked};
+    pendente_analise:document.getElementById('npPendente').checked,
+    ...(precoIa>0?{preco_referencia:precoIa}:{})};
   try {
     const r=await fetch('/api/pecas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const d=await r.json();

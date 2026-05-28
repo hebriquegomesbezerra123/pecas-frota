@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
@@ -37,6 +38,26 @@ function httpsGet(url) {
       res.on('end', () => { try { resolve(JSON.parse(body)); } catch(e) { reject(e); } });
     });
     req.on('error', reject);
+    req.end();
+  });
+}
+
+function httpsPost(url, payload) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify(payload);
+    const u = new URL(url);
+    const options = {
+      hostname: u.hostname, path: u.pathname + u.search,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    };
+    const req = https.request(options, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => { try { resolve(JSON.parse(data)); } catch(e) { reject(e); } });
+    });
+    req.on('error', reject);
+    req.write(body);
     req.end();
   });
 }
@@ -248,6 +269,56 @@ app.post('/api/movimentacoes', (req, res) => {
   catalog.pecas[idx].quantidade -= qty;
   saveCatalog(catalog);
   res.json({ success: true, movimentacao: mov, nova_quantidade: catalog.pecas[idx].quantidade });
+});
+
+// ─── ANÁLISE IA (GEMINI) ─────────────────────────────────────────────────
+app.post('/api/analisar-foto', upload.single('foto'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Nenhuma foto enviada' });
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) {
+    fs.unlinkSync(req.file.path);
+    return res.status(503).json({ error: 'GEMINI_API_KEY não configurada no servidor' });
+  }
+  try {
+    const catalog = loadCatalog();
+    const modelos = [...new Set(catalog.frota.map(v => v.modelo))].sort().join(', ');
+    const base64 = fs.readFileSync(req.file.path).toString('base64');
+    const mime   = req.file.mimetype || 'image/jpeg';
+    fs.unlinkSync(req.file.path);
+
+    const prompt = `Você é especialista em peças automotivas. Analise esta imagem e retorne um JSON com os campos abaixo. Se não conseguir identificar alguma informação pela imagem, use o valor padrão indicado.
+
+Campos obrigatórios:
+- "nome": nome técnico completo da peça em português (ex: "Filtro de Óleo Motor")
+- "codigo": código/referência visível na peça ou embalagem (padrão: "")
+- "fabricante": marca/fabricante (padrão: "Não identificado")
+- "categoria": exatamente uma das opções: "Filtros", "Freios", "Motor", "Embreagem", "Suspensão e Fixação", "Carroceria", "Elétrica e Eletrônica"
+- "descricao": descrição técnica em 1-2 frases
+- "preco_estimado": preço médio em reais no mercado brasileiro (apenas número decimal, ex: 89.90; padrão: 0)
+- "veiculos_sugeridos": array de strings com modelos da frota abaixo que provavelmente usam esta peça (pode ser vazio)
+
+Frota disponível: ${modelos}
+
+IMPORTANTE: retorne SOMENTE o JSON válido, sem markdown, sem texto adicional.`;
+
+    const result = await httpsPost(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+      {
+        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+      }
+    );
+
+    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(clean); } catch(e) { return res.status(422).json({ error: 'IA não retornou JSON válido', raw: text }); }
+
+    res.json({ success: true, dados: parsed });
+  } catch(e) {
+    try { if (req.file) fs.unlinkSync(req.file.path); } catch(_) {}
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── PREÇO MERCADO LIVRE ──────────────────────────────────────────────────────
