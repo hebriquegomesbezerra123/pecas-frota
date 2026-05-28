@@ -1,64 +1,89 @@
 const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
+const cors    = require('cors');
+const path    = require('path');
+const fs      = require('fs');
+const https   = require('https');
+const multer  = require('multer');
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// Carregar catálogo
+// ─── Multer (upload de fotos) ─────────────────────────────────────────────────
+const fotosDir = path.join(__dirname, 'public', 'fotos');
+if (!fs.existsSync(fotosDir)) fs.mkdirSync(fotosDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: fotosDir,
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, Date.now() + ext);
+  }
+});
+const upload = multer({ storage, limits: { fileSize: 15 * 1024 * 1024 } });
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function loadCatalog() {
-  const raw = fs.readFileSync(path.join(__dirname, 'catalog.json'), 'utf-8');
-  return JSON.parse(raw);
+  return JSON.parse(fs.readFileSync(path.join(__dirname, 'catalog.json'), 'utf-8'));
+}
+function saveCatalog(catalog) {
+  fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2), 'utf-8');
 }
 
+function httpsGet(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => { try { resolve(JSON.parse(body)); } catch(e) { reject(e); } });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── ROTAS DE FOTOS (public/fotos/) ──────────────────────────────────────────
+// ─── FOTOS ────────────────────────────────────────────────────────────────────
 app.get('/fotos/:filename', (req, res) => {
-  const filePath = path.join(__dirname, 'public', 'fotos', req.params.filename);
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).json({ error: 'Foto não encontrada' });
-  }
+  const fp = path.join(fotosDir, req.params.filename);
+  if (fs.existsSync(fp)) res.sendFile(fp);
+  else res.status(404).json({ error: 'Foto não encontrada' });
 });
 
-// ─── ROTA: TODAS AS PEÇAS ─────────────────────────────────────────────────────
+// Upload de foto para uma peça
+app.post('/api/pecas/:id/fotos', upload.array('fotos', 10), (req, res) => {
+  if (!req.files || !req.files.length) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+  const catalog = loadCatalog();
+  const idx = catalog.pecas.findIndex(p => p.id === req.params.id);
+  if (idx === -1) {
+    req.files.forEach(f => fs.unlinkSync(f.path));
+    return res.status(404).json({ error: 'Peça não encontrada' });
+  }
+  const filenames = req.files.map(f => f.filename);
+  catalog.pecas[idx].fotos = [...(catalog.pecas[idx].fotos || []), ...filenames];
+  saveCatalog(catalog);
+  res.json({ success: true, fotos: filenames });
+});
+
+// ─── PEÇAS ────────────────────────────────────────────────────────────────────
 app.get('/api/pecas', (req, res) => {
   const catalog = loadCatalog();
   let pecas = catalog.pecas;
-
-  // Filtros opcionais
   const { categoria, veiculo, pendente, q } = req.query;
-
-  if (categoria) {
-    pecas = pecas.filter(p => p.categoria.toLowerCase() === categoria.toLowerCase());
-  }
-  if (veiculo) {
-    pecas = pecas.filter(p =>
-      p.veiculos_compativeis.some(v => v.toLowerCase().includes(veiculo.toLowerCase()))
-    );
-  }
-  if (pendente !== undefined) {
-    pecas = pecas.filter(p => p.pendente_analise === (pendente === 'true'));
-  }
+  if (categoria) pecas = pecas.filter(p => p.categoria.toLowerCase() === categoria.toLowerCase());
+  if (veiculo)   pecas = pecas.filter(p => p.veiculos_compativeis.some(v => v.toLowerCase().includes(veiculo.toLowerCase())));
+  if (pendente !== undefined) pecas = pecas.filter(p => p.pendente_analise === (pendente === 'true'));
   if (q) {
-    const term = q.toLowerCase();
-    pecas = pecas.filter(p =>
-      p.nome.toLowerCase().includes(term) ||
-      p.descricao.toLowerCase().includes(term) ||
-      p.codigo.toLowerCase().includes(term) ||
-      p.fabricante.toLowerCase().includes(term)
-    );
+    const t = q.toLowerCase();
+    pecas = pecas.filter(p => p.nome.toLowerCase().includes(t) || p.descricao.toLowerCase().includes(t) ||
+      p.codigo.toLowerCase().includes(t) || p.fabricante.toLowerCase().includes(t));
   }
-
   res.json({ total: pecas.length, pecas });
 });
 
-// ─── ROTA: UMA PEÇA ───────────────────────────────────────────────────────────
 app.get('/api/pecas/:id', (req, res) => {
   const catalog = loadCatalog();
   const peca = catalog.pecas.find(p => p.id === req.params.id);
@@ -66,85 +91,12 @@ app.get('/api/pecas/:id', (req, res) => {
   res.json(peca);
 });
 
-// ─── ROTA: ATUALIZAR PEÇA (quantidade, observações) ──────────────────────────
-app.put('/api/pecas/:id', (req, res) => {
-  const catalogPath = path.join(__dirname, 'catalog.json');
-  const catalog = loadCatalog();
-  const idx = catalog.pecas.findIndex(p => p.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'Peça não encontrada' });
-
-  const allowed = ['quantidade', 'observacoes', 'pendente_analise', 'nome', 'descricao', 'codigo', 'fabricante', 'veiculos_compativeis'];
-  allowed.forEach(field => {
-    if (req.body[field] !== undefined) {
-      catalog.pecas[idx][field] = req.body[field];
-    }
-  });
-
-  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), 'utf-8');
-  res.json({ success: true, peca: catalog.pecas[idx] });
-});
-
-// ─── ROTA: FROTA ─────────────────────────────────────────────────────────────
-app.get('/api/frota', (req, res) => {
-  const catalog = loadCatalog();
-  res.json({ total: catalog.frota.length, frota: catalog.frota });
-});
-
-// ─── ROTA: PEÇAS POR VEÍCULO ──────────────────────────────────────────────────
-app.get('/api/frota/:placa/pecas', (req, res) => {
-  const catalog = loadCatalog();
-  const veiculo = catalog.frota.find(v => v.placa.toUpperCase() === req.params.placa.toUpperCase());
-  if (!veiculo) return res.status(404).json({ error: 'Veículo não encontrado' });
-
-  const pecas = catalog.pecas.filter(p =>
-    p.veiculos_compativeis.some(v => v.includes(req.params.placa.toUpperCase()))
-  );
-
-  res.json({ veiculo, total_pecas: pecas.length, pecas });
-});
-
-// ─── ROTA: CATEGORIAS ─────────────────────────────────────────────────────────
-app.get('/api/categorias', (req, res) => {
-  const catalog = loadCatalog();
-  const cats = [...new Set(catalog.pecas.map(p => p.categoria))].sort();
-  const result = cats.map(cat => ({
-    categoria: cat,
-    total: catalog.pecas.filter(p => p.categoria === cat).length,
-    total_unidades: catalog.pecas.filter(p => p.categoria === cat).reduce((sum, p) => sum + p.quantidade, 0)
-  }));
-  res.json(result);
-});
-
-// ─── ROTA: ESTATÍSTICAS ───────────────────────────────────────────────────────
-app.get('/api/stats', (req, res) => {
-  const catalog = loadCatalog();
-  const pecas = catalog.pecas;
-
-  res.json({
-    total_itens: pecas.length,
-    total_unidades: pecas.reduce((sum, p) => sum + p.quantidade, 0),
-    pendentes_analise: pecas.filter(p => p.pendente_analise).length,
-    fora_da_frota: pecas.filter(p => p.veiculos_compativeis.length === 0).length,
-    por_categoria: pecas.reduce((acc, p) => {
-      acc[p.categoria] = (acc[p.categoria] || 0) + p.quantidade;
-      return acc;
-    }, {}),
-    por_fabricante: pecas.reduce((acc, p) => {
-      const fab = p.fabricante.split(' ')[0];
-      acc[fab] = (acc[fab] || 0) + p.quantidade;
-      return acc;
-    }, {})
-  });
-});
-
-// ─── ROTA: CRIAR PEÇA ────────────────────────────────────────────────────────
 app.post('/api/pecas', (req, res) => {
-  const catalogPath = path.join(__dirname, 'catalog.json');
   const catalog = loadCatalog();
   const { nome, codigo, fabricante, categoria, descricao, veiculos_compativeis, quantidade, pendente_analise, observacoes } = req.body;
   if (!nome || !categoria) return res.status(400).json({ error: 'Nome e categoria são obrigatórios' });
   const maxNum = catalog.pecas.reduce((m, p) => { const n = parseInt(p.id); return n > m ? n : m; }, 0);
-  const newPeca = {
+  const peca = {
     id: String(maxNum + 1).padStart(3, '0'),
     nome, codigo: codigo || '', fabricante: fabricante || 'Não identificado',
     categoria, descricao: descricao || '',
@@ -153,45 +105,137 @@ app.post('/api/pecas', (req, res) => {
     pendente_analise: !!pendente_analise,
     observacoes: observacoes || '', fotos: []
   };
-  catalog.pecas.push(newPeca);
-  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), 'utf-8');
-  res.json({ success: true, peca: newPeca });
+  catalog.pecas.push(peca);
+  saveCatalog(catalog);
+  res.json({ success: true, peca });
 });
 
-// ─── ROTA: EXCLUIR PEÇA ───────────────────────────────────────────────────────
+app.put('/api/pecas/:id', (req, res) => {
+  const catalog = loadCatalog();
+  const idx = catalog.pecas.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Peça não encontrada' });
+  const allowed = ['quantidade','observacoes','pendente_analise','nome','descricao','codigo','fabricante','veiculos_compativeis'];
+  allowed.forEach(f => { if (req.body[f] !== undefined) catalog.pecas[idx][f] = req.body[f]; });
+  saveCatalog(catalog);
+  res.json({ success: true, peca: catalog.pecas[idx] });
+});
+
 app.delete('/api/pecas/:id', (req, res) => {
-  const catalogPath = path.join(__dirname, 'catalog.json');
   const catalog = loadCatalog();
   const idx = catalog.pecas.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Peça não encontrada' });
   catalog.pecas.splice(idx, 1);
-  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), 'utf-8');
+  saveCatalog(catalog);
   res.json({ success: true });
 });
 
-// ─── ROTA: MOVIMENTAÇÕES ──────────────────────────────────────────────────────
+// ─── FROTA ────────────────────────────────────────────────────────────────────
+app.get('/api/frota', (req, res) => {
+  const catalog = loadCatalog();
+  res.json({ total: catalog.frota.length, frota: catalog.frota });
+});
+
+app.get('/api/frota/:placa/pecas', (req, res) => {
+  const catalog = loadCatalog();
+  const veiculo = catalog.frota.find(v => v.placa.toUpperCase() === req.params.placa.toUpperCase());
+  if (!veiculo) return res.status(404).json({ error: 'Veículo não encontrado' });
+  const pecas = catalog.pecas.filter(p => p.veiculos_compativeis.some(v => v.includes(req.params.placa.toUpperCase())));
+  res.json({ veiculo, total_pecas: pecas.length, pecas });
+});
+
+// ─── CATEGORIAS ───────────────────────────────────────────────────────────────
+app.get('/api/categorias', (req, res) => {
+  const catalog = loadCatalog();
+  const cats = [...new Set(catalog.pecas.map(p => p.categoria))].sort();
+  res.json(cats.map(cat => ({
+    categoria: cat,
+    total: catalog.pecas.filter(p => p.categoria === cat).length,
+    total_unidades: catalog.pecas.filter(p => p.categoria === cat).reduce((s, p) => s + p.quantidade, 0)
+  })));
+});
+
+// ─── ESTATÍSTICAS ─────────────────────────────────────────────────────────────
+app.get('/api/stats', (req, res) => {
+  const catalog = loadCatalog();
+  const pecas = catalog.pecas;
+  res.json({
+    total_itens: pecas.length,
+    total_unidades: pecas.reduce((s, p) => s + p.quantidade, 0),
+    pendentes_analise: pecas.filter(p => p.pendente_analise).length,
+    fora_da_frota: pecas.filter(p => p.veiculos_compativeis.length === 0).length,
+    por_categoria: pecas.reduce((a, p) => { a[p.categoria] = (a[p.categoria]||0) + p.quantidade; return a; }, {}),
+    por_fabricante: pecas.reduce((a, p) => { const f = p.fabricante.split(' ')[0]; a[f] = (a[f]||0) + p.quantidade; return a; }, {})
+  });
+});
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+app.get('/api/dashboard', (req, res) => {
+  const catalog = loadCatalog();
+  const movs  = catalog.movimentacoes || [];
+  const pecas = catalog.pecas;
+
+  // Movimentações por veículo (quantidade total retirada)
+  const porVeiculo = {};
+  movs.forEach(m => {
+    const v = m.veiculo || 'Sem veículo';
+    porVeiculo[v] = (porVeiculo[v] || 0) + m.quantidade;
+  });
+
+  // Top peças mais retiradas
+  const porPeca = {};
+  movs.forEach(m => { porPeca[m.peca_nome] = (porPeca[m.peca_nome] || 0) + m.quantidade; });
+  const topPecas = Object.entries(porPeca)
+    .sort((a,b) => b[1] - a[1]).slice(0, 10)
+    .map(([nome, qtd]) => ({ nome: nome.length > 28 ? nome.substring(0,25)+'…' : nome, qtd }));
+
+  // Estoque por categoria
+  const porCategoria = {};
+  pecas.forEach(p => { porCategoria[p.categoria] = (porCategoria[p.categoria] || 0) + p.quantidade; });
+
+  // Movimentações por mês (últimos 6 meses)
+  const porMes = {};
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    porMes[`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`] = 0;
+  }
+  movs.forEach(m => { const k = (m.data||'').substring(0,7); if (k in porMes) porMes[k] += m.quantidade; });
+
+  // Últimas 5 movimentações
+  const ultimas = movs.slice().reverse().slice(0, 5);
+
+  res.json({
+    total_baixas: movs.length,
+    total_qtd_baixas: movs.reduce((s,m) => s + m.quantidade, 0),
+    por_veiculo: porVeiculo,
+    top_pecas: topPecas,
+    por_categoria: porCategoria,
+    por_mes: porMes,
+    ultimas_movimentacoes: ultimas
+  });
+});
+
+// ─── MOVIMENTAÇÕES ────────────────────────────────────────────────────────────
 app.get('/api/movimentacoes', (req, res) => {
   const catalog = loadCatalog();
-  const movs = (catalog.movimentacoes || []).slice().reverse();
-  res.json({ total: movs.length, movimentacoes: movs });
+  res.json({ total: (catalog.movimentacoes||[]).length, movimentacoes: (catalog.movimentacoes||[]).slice().reverse() });
 });
 
 app.get('/api/movimentacoes/peca/:pecaId', (req, res) => {
   const catalog = loadCatalog();
-  const movs = (catalog.movimentacoes || []).filter(m => m.peca_id === req.params.pecaId).slice().reverse();
+  const movs = (catalog.movimentacoes||[]).filter(m => m.peca_id === req.params.pecaId).slice().reverse();
   res.json({ total: movs.length, movimentacoes: movs });
 });
 
 app.post('/api/movimentacoes', (req, res) => {
-  const catalogPath = path.join(__dirname, 'catalog.json');
   const catalog = loadCatalog();
   if (!catalog.movimentacoes) catalog.movimentacoes = [];
   const { peca_id, responsavel, veiculo, quantidade, data, observacoes } = req.body;
   if (!peca_id || !responsavel || !quantidade) return res.status(400).json({ error: 'peca_id, responsavel e quantidade são obrigatórios' });
-  const pecaIdx = catalog.pecas.findIndex(p => p.id === peca_id);
-  if (pecaIdx === -1) return res.status(404).json({ error: 'Peça não encontrada' });
-  const peca = catalog.pecas[pecaIdx];
-  const qty = parseInt(quantidade);
+  const idx = catalog.pecas.findIndex(p => p.id === peca_id);
+  if (idx === -1) return res.status(404).json({ error: 'Peça não encontrada' });
+  const peca = catalog.pecas[idx];
+  const qty  = parseInt(quantidade);
   if (peca.quantidade < qty) return res.status(400).json({ error: `Estoque insuficiente. Disponível: ${peca.quantidade}` });
   const mov = {
     id: 'MOV' + String(catalog.movimentacoes.length + 1).padStart(4, '0'),
@@ -201,21 +245,19 @@ app.post('/api/movimentacoes', (req, res) => {
     observacoes: observacoes || '', criado_em: new Date().toISOString()
   };
   catalog.movimentacoes.push(mov);
-  catalog.pecas[pecaIdx].quantidade -= qty;
-  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), 'utf-8');
-  res.json({ success: true, movimentacao: mov, nova_quantidade: catalog.pecas[pecaIdx].quantidade });
+  catalog.pecas[idx].quantidade -= qty;
+  saveCatalog(catalog);
+  res.json({ success: true, movimentacao: mov, nova_quantidade: catalog.pecas[idx].quantidade });
 });
 
-// ─── ROTA: PREÇO MERCADO LIVRE ────────────────────────────────────────────────
+// ─── PREÇO MERCADO LIVRE ──────────────────────────────────────────────────────
 app.get('/api/preco/:id', async (req, res) => {
   try {
     const catalog = loadCatalog();
     const peca = catalog.pecas.find(p => p.id === req.params.id);
     if (!peca) return res.status(404).json({ error: 'Peça não encontrada' });
     const q = encodeURIComponent([peca.nome, peca.codigo, peca.fabricante].filter(Boolean).join(' ').substring(0, 80));
-    const url = `https://api.mercadolibre.com/sites/MLB/search?q=${q}&limit=10`;
-    const response = await fetch(url);
-    const data = await response.json();
+    const data = await httpsGet(`https://api.mercadolibre.com/sites/MLB/search?q=${q}&limit=10`);
     const items = (data.results || []).filter(i => i.price > 0).slice(0, 10);
     if (!items.length) return res.json({ found: false });
     const prices = items.map(i => i.price);
@@ -231,13 +273,12 @@ app.get('/api/preco/:id', async (req, res) => {
   } catch(e) { res.json({ found: false, error: e.message }); }
 });
 
-// ─── FALLBACK → index.html ────────────────────────────────────────────────────
+// ─── FALLBACK ─────────────────────────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
   console.log(`\n✅ Servidor rodando em http://localhost:${PORT}`);
-  console.log(`📦 API de Peças disponível em http://localhost:${PORT}/api/pecas`);
-  console.log(`🚛 Frota disponível em http://localhost:${PORT}/api/frota\n`);
+  console.log(`📦 API disponível em http://localhost:${PORT}/api/pecas\n`);
 });
