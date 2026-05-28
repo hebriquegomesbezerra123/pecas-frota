@@ -271,6 +271,18 @@ app.post('/api/movimentacoes', (req, res) => {
   res.json({ success: true, movimentacao: mov, nova_quantidade: catalog.pecas[idx].quantidade });
 });
 
+// ─── DIAGNÓSTICO ─────────────────────────────────────────────────────────
+app.get('/api/status', (req, res) => {
+  const key = process.env.GEMINI_API_KEY || '';
+  res.json({
+    ok: true,
+    gemini_configurado: key.length > 0,
+    gemini_key_preview: key ? key.substring(0,8)+'...' : 'NÃO CONFIGURADA',
+    node_env: process.env.NODE_ENV || 'não definido',
+    hora: new Date().toISOString()
+  });
+});
+
 // ─── ANÁLISE IA (GEMINI) ─────────────────────────────────────────────────
 app.post('/api/analisar-foto', upload.single('foto'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhuma foto enviada' });
