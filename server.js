@@ -286,33 +286,36 @@ app.post('/api/analisar-foto', upload.single('foto'), async (req, res) => {
     const mime   = req.file.mimetype || 'image/jpeg';
     fs.unlinkSync(req.file.path);
 
-    const prompt = `Você é especialista em peças automotivas. Analise esta imagem e retorne um JSON com os campos abaixo. Se não conseguir identificar alguma informação pela imagem, use o valor padrão indicado.
+    const prompt = `Analise a imagem desta peça automotiva e retorne SOMENTE um objeto JSON puro, sem nenhum texto antes ou depois, sem blocos de código markdown.
 
-Campos obrigatórios:
-- "nome": nome técnico completo da peça em português (ex: "Filtro de Óleo Motor")
-- "codigo": código/referência visível na peça ou embalagem (padrão: "")
-- "fabricante": marca/fabricante (padrão: "Não identificado")
-- "categoria": exatamente uma das opções: "Filtros", "Freios", "Motor", "Embreagem", "Suspensão e Fixação", "Carroceria", "Elétrica e Eletrônica"
-- "descricao": descrição técnica em 1-2 frases
-- "preco_estimado": preço médio em reais no mercado brasileiro (apenas número decimal, ex: 89.90; padrão: 0)
-- "veiculos_sugeridos": array de strings com modelos da frota abaixo que provavelmente usam esta peça (pode ser vazio)
+Formato exato (substitua os valores):
+{"nome":"nome técnico da peça","codigo":"referência visível ou vazio","fabricante":"marca ou Não identificado","categoria":"uma das categorias abaixo","descricao":"descrição técnica em 1-2 frases","preco_estimado":0,"veiculos_sugeridos":["modelo1","modelo2"]}
 
-Frota disponível: ${modelos}
+Categorias válidas (use exatamente uma): Filtros | Freios | Motor | Embreagem | Suspensão e Fixação | Carroceria | Elétrica e Eletrônica
 
-IMPORTANTE: retorne SOMENTE o JSON válido, sem markdown, sem texto adicional.`;
+Frota disponível para veiculos_sugeridos: ${modelos}
+
+Responda APENAS com o JSON. Nenhum outro texto.`;
 
     const result = await httpsPost(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
       {
         contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+        generationConfig: { temperature: 0.1, maxOutputTokens: 600, responseMimeType: 'application/json' }
       }
     );
 
     const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const clean = text.replace(/```json|```/g, '').trim();
+    // Extrai bloco JSON mesmo que venha dentro de markdown ou com texto ao redor
     let parsed;
-    try { parsed = JSON.parse(clean); } catch(e) { return res.status(422).json({ error: 'IA não retornou JSON válido', raw: text }); }
+    const attempts = [
+      () => JSON.parse(text.trim()),
+      () => JSON.parse(text.replace(/```json\s*/gi, '').replace(/```/g, '').trim()),
+      () => { const m = text.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); throw new Error('no match'); }
+    ];
+    let lastErr;
+    for (const fn of attempts) { try { parsed = fn(); break; } catch(e) { lastErr = e; } }
+    if (!parsed) return res.status(422).json({ error: 'IA não retornou JSON válido', raw: text.substring(0, 300) });
 
     res.json({ success: true, dados: parsed });
   } catch(e) {
