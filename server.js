@@ -301,7 +301,7 @@ Responda APENAS com o JSON. Nenhum outro texto.`;
       `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${key}`,
       {
         contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 600 }
+        generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
       }
     );
 
