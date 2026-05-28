@@ -568,7 +568,12 @@
             <i class="bi bi-box-arrow-up me-1"></i>Dar Baixa
           </button>
         </div>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-primary" onclick="openEditModal()">
+            <i class="bi bi-pencil me-1"></i>Editar
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -656,7 +661,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button class="btn btn-primary" onclick="submitNovaPeca()">
+        <button class="btn btn-primary" id="npSubmitBtn" onclick="submitNovaPeca()">
           <i class="bi bi-plus-circle me-1"></i>Adicionar Peça
         </button>
       </div>
@@ -1134,7 +1139,26 @@ async function analisarComIA(){
     btn.innerHTML='<i class="bi bi-stars me-1"></i>Tentar novamente';
   }
 }
+let editingId = null;
+
+function buildVeiculosCheck(selectedModelos=[]){
+  const wrap=document.getElementById('npVeiculosCheck'); wrap.innerHTML='';
+  const modMap={};
+  allFrota.forEach(v=>{ if(!modMap[v.modelo]) modMap[v.modelo]=[]; modMap[v.modelo].push(v); });
+  Object.keys(modMap).sort().forEach(mod=>{
+    const label=mod.replace('VW/','VW ');
+    const count=modMap[mod].length;
+    const checked=selectedModelos.includes(mod);
+    const lbl=document.createElement('label'); lbl.className='d-flex align-items-center gap-1 small'; lbl.style.cursor='pointer';
+    lbl.innerHTML=`<input type="checkbox" class="form-check-input" value="${mod}" style="margin:0"${checked?' checked':''}> <span>${label}<span class="text-muted ms-1">(${count})</span></span>`;
+    wrap.appendChild(lbl);
+  });
+}
+
 function openNovaPecaModal(){
+  editingId=null;
+  document.querySelector('#modalNovaPeca .modal-title').innerHTML='<i class="bi bi-plus-circle me-2"></i>Nova Peça';
+  document.getElementById('npSubmitBtn').innerHTML='<i class="bi bi-plus-circle me-1"></i>Adicionar Peça';
   ['npNome','npCodigo','npFabricante','npDescricao','npObs'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('npCategoria').value='';
   document.getElementById('npQtd').value=1;
@@ -1147,18 +1171,43 @@ function openNovaPecaModal(){
   const btnIA=document.getElementById('btnAnalisarIA');
   btnIA.disabled=false; btnIA.style.background='linear-gradient(135deg,#4f46e5,#7c3aed)';
   btnIA.innerHTML='<i class="bi bi-stars me-1"></i>Analisar com IA — preencher automaticamente';
-  const wrap=document.getElementById('npVeiculosCheck'); wrap.innerHTML='';
-  const modMap={};
-  allFrota.forEach(v=>{ if(!modMap[v.modelo]) modMap[v.modelo]=[]; modMap[v.modelo].push(v); });
-  Object.keys(modMap).sort().forEach(mod=>{
-    const label=mod.replace('VW/','VW ');
-    const count=modMap[mod].length;
-    const lbl=document.createElement('label'); lbl.className='d-flex align-items-center gap-1 small'; lbl.style.cursor='pointer';
-    lbl.innerHTML=`<input type="checkbox" class="form-check-input" value="${mod}" style="margin:0"> <span>${label}<span class="text-muted ms-1">(${count})</span></span>`;
-    wrap.appendChild(lbl);
-  });
+  buildVeiculosCheck();
   if(!modalNovaBs) modalNovaBs=new bootstrap.Modal(document.getElementById('modalNovaPeca'));
   modalNovaBs.show();
+}
+
+function openEditModal(){
+  const p=allPecas.find(x=>x.id===currentId); if(!p) return;
+  editingId=p.id;
+  document.querySelector('#modalNovaPeca .modal-title').innerHTML='<i class="bi bi-pencil me-2"></i>Editar Peça';
+  document.getElementById('npSubmitBtn').innerHTML='<i class="bi bi-check2-circle me-1"></i>Salvar Alterações';
+  document.getElementById('npNome').value=p.nome||'';
+  document.getElementById('npCodigo').value=p.codigo||'';
+  document.getElementById('npFabricante').value=p.fabricante||'';
+  document.getElementById('npCategoria').value=p.categoria||'';
+  document.getElementById('npDescricao').value=p.descricao||'';
+  document.getElementById('npObs').value=p.observacoes||'';
+  document.getElementById('npQtd').value=p.quantidade||0;
+  document.getElementById('npPendente').checked=!!p.pendente_analise;
+  document.getElementById('uploadPreview').innerHTML='';
+  document.getElementById('npFotoInput').value='';
+  delete document.getElementById('npFotoInput').dataset.precoIa;
+  document.getElementById('iaBtnWrap').style.display='none';
+  document.getElementById('iaResultado').style.display='none';
+  const btnIA=document.getElementById('btnAnalisarIA');
+  btnIA.disabled=false; btnIA.style.background='linear-gradient(135deg,#4f46e5,#7c3aed)';
+  btnIA.innerHTML='<i class="bi bi-stars me-1"></i>Analisar com IA — preencher automaticamente';
+  // Determina quais modelos estão selecionados a partir das placas em veiculos_compativeis
+  const selectedModelos=[...new Set(
+    (p.veiculos_compativeis||[]).map(vc=>{
+      const found=allFrota.find(f=>vc.toUpperCase().includes(f.placa.toUpperCase()));
+      return found?found.modelo:null;
+    }).filter(Boolean)
+  )];
+  buildVeiculosCheck(selectedModelos);
+  if(!modalNovaBs) modalNovaBs=new bootstrap.Modal(document.getElementById('modalNovaPeca'));
+  if(modalBs) modalBs.hide();
+  setTimeout(()=>modalNovaBs.show(),300);
 }
 async function submitNovaPeca(){
   const nome=document.getElementById('npNome').value.trim(), cat=document.getElementById('npCategoria').value;
@@ -1176,23 +1225,44 @@ async function submitNovaPeca(){
     pendente_analise:document.getElementById('npPendente').checked,
     ...(precoIa>0?{preco_referencia:precoIa}:{})};
   try {
-    const r=await fetch('/api/pecas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const d=await r.json();
-    if(!d.success){showToast(d.error||'Erro.','danger');return;}
-    allPecas.push(d.peca);
-    // Upload fotos se houver
-    const files=document.getElementById('npFotoInput').files;
-    if(files.length){
-      const fd=new FormData();
-      Array.from(files).forEach(f=>fd.append('fotos',f));
-      const r2=await fetch(`/api/pecas/${d.peca.id}/fotos`,{method:'POST',body:fd});
-      const d2=await r2.json();
-      if(d2.success) d.peca.fotos=d2.fotos;
+    if(editingId){
+      // ── EDITAR ──
+      const r=await fetch(`/api/pecas/${editingId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const d=await r.json();
+      if(!d.success){showToast(d.error||'Erro.','danger');return;}
+      const idx=allPecas.findIndex(x=>x.id===editingId);
+      if(idx>-1) allPecas[idx]={...allPecas[idx],...d.peca};
+      // Upload fotos extras se houver
+      const files=document.getElementById('npFotoInput').files;
+      if(files.length){
+        const fd=new FormData();
+        Array.from(files).forEach(f=>fd.append('fotos',f));
+        const r2=await fetch(`/api/pecas/${editingId}/fotos`,{method:'POST',body:fd});
+        const d2=await r2.json();
+        if(d2.success&&idx>-1) allPecas[idx].fotos=[...(allPecas[idx].fotos||[]),...d2.fotos];
+      }
+      if(modalNovaBs) modalNovaBs.hide();
+      reloadStats(); filterPecas();
+      showToast(`"${nome}" atualizada!`,'success');
+    } else {
+      // ── CRIAR ──
+      const r=await fetch('/api/pecas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const d=await r.json();
+      if(!d.success){showToast(d.error||'Erro.','danger');return;}
+      allPecas.push(d.peca);
+      const files=document.getElementById('npFotoInput').files;
+      if(files.length){
+        const fd=new FormData();
+        Array.from(files).forEach(f=>fd.append('fotos',f));
+        const r2=await fetch(`/api/pecas/${d.peca.id}/fotos`,{method:'POST',body:fd});
+        const d2=await r2.json();
+        if(d2.success) d.peca.fotos=d2.fotos;
+      }
+      if(modalNovaBs) modalNovaBs.hide();
+      reloadStats(); filterPecas();
+      showToast(`"${d.peca.nome}" adicionada!`,'success');
     }
-    if(modalNovaBs) modalNovaBs.hide();
-    reloadStats(); filterPecas();
-    showToast(`"${d.peca.nome}" adicionada!`,'success');
-  } catch(e){ showToast('Erro ao criar peça.','danger'); }
+  } catch(e){ showToast('Erro ao salvar peça.','danger'); }
 }
 
 /* ─── Movimentações ───────────────────────────────────────────────────── */
