@@ -1071,7 +1071,12 @@ async function analisarComIA(){
   try {
     const r=await fetch('/api/analisar-foto',{method:'POST',body:fd});
     const d=await r.json();
-    if(!d.success){ throw new Error(d.error||'Erro desconhecido'); }
+    if(!d.success){
+      let msg=d.error||'Erro desconhecido';
+      if(d.raw) msg+=`\n\nResposta bruta da IA:\n${d.raw}`;
+      if(d.result) msg+=`\n\nEstrutura retornada:\n${d.result}`;
+      throw new Error(msg);
+    }
 
     const p=d.dados;
     // Preenche campos do formulário
@@ -1114,8 +1119,10 @@ async function analisarComIA(){
     btn.innerHTML='<i class="bi bi-check2-circle me-1"></i>Analisado! Revise os campos abaixo';
     btn.style.background='linear-gradient(135deg,#059669,#047857)';
   } catch(e){
+    let msg = e.message;
+    try { const j = JSON.parse(e.message); msg = j.error + (j.raw ? ` — raw: ${j.raw}` : '') + (j.result ? ` — result: ${j.result}` : ''); } catch(_){}
     res.style.display='';
-    res.innerHTML=`<div class="alert alert-danger border-0 py-2 px-3 mb-0 small"><i class="bi bi-exclamation-triangle me-1"></i>${e.message}</div>`;
+    res.innerHTML=`<div class="alert alert-danger border-0 py-2 px-3 mb-0 small" style="word-break:break-word"><i class="bi bi-exclamation-triangle me-1"></i>${msg}</div>`;
     btn.disabled=false;
     btn.innerHTML='<i class="bi bi-stars me-1"></i>Tentar novamente';
   }

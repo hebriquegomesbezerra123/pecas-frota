@@ -301,11 +301,17 @@ Responda APENAS com o JSON. Nenhum outro texto.`;
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
       {
         contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 600, responseMimeType: 'application/json' }
+        generationConfig: { temperature: 0.1, maxOutputTokens: 600 }
       }
     );
 
+    // Verifica erro na API do Gemini
+    if (result?.error) return res.status(502).json({ error: `Gemini API: ${result.error.message || JSON.stringify(result.error)}` });
+
     const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const finishReason = result?.candidates?.[0]?.finishReason || '';
+    if (!text) return res.status(422).json({ error: `Gemini não gerou texto (finishReason: ${finishReason})`, result: JSON.stringify(result).substring(0, 400) });
+
     // Extrai bloco JSON mesmo que venha dentro de markdown ou com texto ao redor
     let parsed;
     const attempts = [
@@ -313,9 +319,8 @@ Responda APENAS com o JSON. Nenhum outro texto.`;
       () => JSON.parse(text.replace(/```json\s*/gi, '').replace(/```/g, '').trim()),
       () => { const m = text.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); throw new Error('no match'); }
     ];
-    let lastErr;
-    for (const fn of attempts) { try { parsed = fn(); break; } catch(e) { lastErr = e; } }
-    if (!parsed) return res.status(422).json({ error: 'IA não retornou JSON válido', raw: text.substring(0, 300) });
+    for (const fn of attempts) { try { parsed = fn(); break; } catch(e) {} }
+    if (!parsed) return res.status(422).json({ error: 'IA não retornou JSON válido', raw: text.substring(0, 500) });
 
     res.json({ success: true, dados: parsed });
   } catch(e) {
