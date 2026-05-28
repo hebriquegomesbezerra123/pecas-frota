@@ -298,7 +298,7 @@ Frota disponível para veiculos_sugeridos: ${modelos}
 Responda APENAS com o JSON. Nenhum outro texto.`;
 
     const result = await httpsPost(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`,
       {
         contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }] }],
         generationConfig: { temperature: 0.1, maxOutputTokens: 600 }
