@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <style>
-    /* ─── Brand Colors ───────────────────────────────────────────────────────── */
     :root {
       --brand-navy:        #1B2B6E;
       --brand-orange:      #F5941D;
@@ -19,33 +18,25 @@
       --brand-orange-dark: #D97E0F;
       --sidebar-bg:        #1B2B6E;
     }
-
-    /* ─── Bootstrap overrides ─────────────────────────────────────────────── */
     .btn-primary { background-color: var(--brand-navy); border-color: var(--brand-navy); }
     .btn-primary:hover, .btn-primary:focus { background-color: var(--brand-navy-dark); border-color: var(--brand-navy-dark); }
     .btn-outline-primary { color: var(--brand-navy); border-color: var(--brand-navy); }
     .btn-outline-primary:hover { background-color: var(--brand-navy); border-color: var(--brand-navy); }
-    a { color: var(--brand-navy); }
-    a:hover { color: var(--brand-navy-dark); }
+    a { color: var(--brand-navy); } a:hover { color: var(--brand-navy-dark); }
     .text-primary { color: var(--brand-navy) !important; }
     .bg-primary   { background-color: var(--brand-navy) !important; }
-    .border-primary { border-color: var(--brand-navy) !important; }
     .badge.bg-primary { background-color: var(--brand-navy) !important; }
     .form-control:focus, .form-select:focus {
       border-color: var(--brand-cyan);
       box-shadow: 0 0 0 0.2rem rgba(0,191,223,0.25);
     }
-
-    /* ─── Layout ──────────────────────────────────────────────────────────── */
     body {
       background-color: #f0f2f7;
       font-family: 'Nunito', 'Segoe UI', sans-serif;
-      font-weight: 400;
-      color: #3a3f5c;
-      letter-spacing: 0.01em;
+      font-weight: 400; color: #3a3f5c; letter-spacing: 0.01em;
     }
     h1,h2,h3,h4,h5,h6 { font-family: 'Nunito', sans-serif; font-weight: 500; }
-    .fw-bold    { font-weight: 600 !important; }
+    .fw-bold { font-weight: 600 !important; }
     .fw-semibold { font-weight: 500 !important; }
     .table { font-size: 0.88rem; }
     .btn { font-family: 'Nunito', sans-serif; font-weight: 500; letter-spacing: 0.02em; }
@@ -53,24 +44,17 @@
     .badge { font-weight: 500; letter-spacing: 0.03em; }
     #app-wrapper { min-height: 100vh; }
 
-    /* ─── Sidebar ─────────────────────────────────────────────────────────── */
+    /* ─── Sidebar ─────────────────────────────────────────────── */
     #sidebar {
-      width: 260px;
-      min-height: 100vh;
+      width: 260px; min-height: 100vh;
       background-color: var(--sidebar-bg) !important;
       transition: width 0.25s ease;
-      overflow: hidden;
-      flex-shrink: 0;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow-y: auto;
-      overflow-x: hidden;
+      flex-shrink: 0; position: sticky; top: 0; height: 100vh;
+      overflow-y: auto; overflow-x: hidden;
     }
     #sidebar::-webkit-scrollbar { width: 4px; }
     #sidebar::-webkit-scrollbar-track { background: transparent; }
     #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
-
     #sidebar.collapsed { width: 64px; }
     #sidebar.collapsed .sidebar-text { display: none !important; }
     #sidebar.collapsed .sidebar-logo-img  { display: none !important; }
@@ -79,84 +63,46 @@
     #sidebar.collapsed .section-header .section-title { display: none; }
     #sidebar.collapsed .section-header .section-chevron { display: none; }
     #sidebar.collapsed .sidebar-collapse { display: none !important; }
-
     #sidebar .nav-link {
-      border-radius: 6px;
-      padding: 8px 12px;
+      border-radius: 6px; padding: 8px 12px;
       transition: background 0.15s;
       color: rgba(255,255,255,0.75) !important;
-      font-size: 0.9rem;
-      font-weight: 400;
-      letter-spacing: 0.01em;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      white-space: nowrap;
-      overflow: hidden;
+      font-size: 0.9rem; font-weight: 400; letter-spacing: 0.01em;
+      cursor: pointer; display: flex; align-items: center;
+      white-space: nowrap; overflow: hidden;
     }
-    #sidebar .nav-link .sidebar-text {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    #sidebar .nav-link .sidebar-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     #sidebar .nav-link:hover  { background-color: rgba(255,255,255,0.12); color: #fff !important; }
     #sidebar .nav-link.active { background-color: var(--brand-orange); color: #fff !important; font-weight: 600; }
     #sidebar .nav-link i.nav-icon { width: 20px; text-align: center; flex-shrink: 0; }
-
     .sidebar-brand {
-      min-height: 72px;
-      background-color: #fff;
-      border-bottom: 3px solid var(--brand-orange) !important;
-      flex-shrink: 0;
+      min-height: 72px; background-color: #fff;
+      border-bottom: 3px solid var(--brand-orange) !important; flex-shrink: 0;
     }
     .sidebar-logo-img { max-height: 52px; width: auto; object-fit: contain; }
     .sidebar-logo-icon {
-      display: none;
-      width: 36px; height: 36px;
-      border-radius: 8px;
+      display: none; width: 36px; height: 36px; border-radius: 8px;
       background-color: var(--brand-orange);
       align-items: center; justify-content: center;
       color: #fff; font-size: 1.1rem;
     }
     .sidebar-footer { flex-shrink: 0; background-color: var(--brand-navy-dark); }
-
-    /* Section headers with chevron */
     .section-header {
-      display: flex;
-      align-items: center;
-      padding: 8px 12px 4px;
-      cursor: pointer;
-      user-select: none;
+      display: flex; align-items: center; padding: 8px 12px 4px;
+      cursor: pointer; user-select: none;
     }
     .section-header:hover { background: rgba(255,255,255,0.05); border-radius: 6px; }
-    .section-title {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--brand-cyan);
-      opacity: 0.85;
-      flex: 1;
-    }
-    .section-chevron {
-      color: rgba(255,255,255,0.4);
-      font-size: 0.75rem;
-      transition: transform 0.2s;
-      flex-shrink: 0;
-    }
+    .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--brand-cyan); opacity: 0.85; flex: 1; }
+    .section-chevron { color: rgba(255,255,255,0.4); font-size: 0.75rem; transition: transform 0.2s; flex-shrink: 0; }
     .section-chevron.open { transform: rotate(180deg); }
     .sidebar-collapse { overflow: hidden; transition: max-height 0.25s ease; }
     .sidebar-collapse.closed { max-height: 0 !important; }
 
-    /* ─── Content ─────────────────────────────────────────────────────────── */
+    /* ─── Content ─────────────────────────────────────────────── */
     #content-wrapper { min-width: 0; }
-    .topbar {
-      min-height: 52px;
-      position: sticky; top: 0; z-index: 100;
-      border-bottom: 2px solid var(--brand-orange) !important;
-    }
+    .topbar { min-height: 52px; position: sticky; top: 0; z-index: 100; border-bottom: 2px solid var(--brand-orange) !important; }
 
-    /* ─── KPI Cards ───────────────────────────────────────────────────────── */
+    /* ─── KPI Cards ───────────────────────────────────────────── */
     .kpi-card { border-left: 5px solid; border-radius: 8px; transition: transform 0.15s; }
     .kpi-card:hover { transform: translateY(-2px); }
     .kpi-card.kpi-primary { border-left-color: var(--brand-navy); }
@@ -166,129 +112,81 @@
     .kpi-value { font-size: 1.9rem; font-weight: 600; line-height: 1; color: var(--brand-navy); }
     .kpi-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: #8a92b2; font-weight: 400; }
 
-    /* ─── Cards ───────────────────────────────────────────────────────────── */
+    /* ─── Cards ───────────────────────────────────────────────── */
     .card { border: none; border-radius: 10px; }
-    .card-header {
-      background-color: #f8f9fb;
-      border-bottom: 1px solid #e8eaf0;
-      border-radius: 10px 10px 0 0 !important;
-    }
-
-    /* ─── Parts grid ──────────────────────────────────────────────────────── */
-    .peca-card {
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-      border-radius: 10px !important;
-    }
+    .card-header { background-color: #f8f9fb; border-bottom: 1px solid #e8eaf0; border-radius: 10px 10px 0 0 !important; }
+    .peca-card { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; border-radius: 10px !important; }
     .peca-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(27,43,110,0.15) !important; }
-    .peca-thumb {
-      width: 100%; height: 170px;
-      object-fit: cover;
-      border-radius: 10px 10px 0 0;
-      background: #e8eaf0;
-    }
-    .peca-thumb-placeholder {
-      width: 100%; height: 170px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 2.5rem; color: #b0b8d0;
-      background: #e8eaf0;
-      border-radius: 10px 10px 0 0;
-    }
-    .cat-badge {
-      font-size: 0.7rem; font-weight: 600;
-      letter-spacing: 0.05em; text-transform: uppercase;
-    }
+    .peca-thumb { width: 100%; height: 170px; object-fit: cover; border-radius: 10px 10px 0 0; background: #e8eaf0; }
+    .peca-thumb-placeholder { width: 100%; height: 170px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #b0b8d0; background: #e8eaf0; border-radius: 10px 10px 0 0; }
+    .cat-badge { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
 
-    /* ─── Tables ──────────────────────────────────────────────────────────── */
+    /* ─── Tables ──────────────────────────────────────────────── */
     .table thead.table-dark th {
       background-color: var(--brand-navy) !important;
       border-color: var(--brand-navy-dark) !important;
-      font-weight: 500; font-size: 0.78rem;
-      letter-spacing: 0.06em; text-transform: uppercase;
+      font-weight: 500; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase;
     }
     .table-hover tbody tr:hover td { background-color: rgba(0,191,223,0.06); }
 
-    /* ─── Mobile ──────────────────────────────────────────────────────────── */
+    /* ─── Mobile ──────────────────────────────────────────────── */
     @media (max-width: 768px) {
-      #sidebar {
-        position: fixed; z-index: 1050;
-        transform: translateX(-100%);
-        width: 260px;
-        transition: transform 0.25s ease;
-      }
+      #sidebar { position: fixed; z-index: 1050; transform: translateX(-100%); width: 260px; transition: transform 0.25s ease; }
       #sidebar.mobile-open { transform: translateX(0); }
-      #sidebar-overlay {
-        display: none; position: fixed; inset: 0;
-        background: rgba(0,0,0,0.5); z-index: 1040;
-      }
+      #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1040; }
       #sidebar-overlay.active { display: block; }
     }
 
-    /* ─── Collapse arrow ──────────────────────────────────────────────────── */
-    .collapse-toggle::after {
-      content: '\F282'; font-family: 'bootstrap-icons';
-      float: right; transition: transform 0.2s;
-    }
-    .collapse-toggle.collapsed::after { transform: rotate(-90deg); }
-
-    /* ─── Vehicle cards ───────────────────────────────────────────────────── */
-    .vehicle-card {
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-      border-left: 4px solid var(--brand-orange);
-    }
+    /* ─── Vehicle cards ───────────────────────────────────────── */
+    .vehicle-card { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; border-left: 4px solid var(--brand-orange); }
     .vehicle-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(27,43,110,0.12) !important; }
 
-    /* ─── Toast ───────────────────────────────────────────────────────────── */
-    #toast {
-      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-      min-width: 220px;
-    }
+    /* ─── Toast ───────────────────────────────────────────────── */
+    #toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; min-width: 220px; }
 
-    /* ─── Modal gallery ───────────────────────────────────────────────────── */
+    /* ─── Modal gallery ───────────────────────────────────────── */
     .thumb-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-    .thumb-strip img {
-      width: 56px; height: 42px; object-fit: cover;
-      border-radius: 4px; cursor: pointer;
-      border: 2px solid transparent; transition: border-color 0.15s;
-    }
+    .thumb-strip img { width: 56px; height: 42px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; }
     .thumb-strip img.active { border-color: var(--brand-orange); }
     .main-photo { width: 100%; max-height: 320px; object-fit: contain; border-radius: 8px; background: #f0f2f7; }
     .qty-control { display: flex; align-items: center; gap: 10px; }
-    .qty-btn {
-      width: 36px; height: 36px; border-radius: 50%;
-      border: 2px solid var(--brand-navy); background: transparent;
-      color: var(--brand-navy); font-size: 1.2rem; font-weight: 700;
-      cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
-    }
+    .qty-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--brand-navy); background: transparent; color: var(--brand-navy); font-size: 1.2rem; font-weight: 700; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
     .qty-btn:hover { background: var(--brand-navy); color: #fff; }
     .qty-display { font-size: 1.6rem; font-weight: 700; min-width: 40px; text-align: center; color: var(--brand-navy); }
 
-    /* ─── Search clear ────────────────────────────────────────────────────── */
+    /* ─── Search / filter ─────────────────────────────────────── */
     .search-wrap { position: relative; }
-    .search-wrap .bi-x-circle {
-      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-      cursor: pointer; color: #aaa; display: none;
-    }
+    .search-wrap .bi-x-circle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #aaa; display: none; }
     .search-wrap input:not(:placeholder-shown) ~ .bi-x-circle { display: block; }
+
+    /* ─── Active filter badge ─────────────────────────────────── */
+    .filter-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--brand-orange); color: #fff;
+      border-radius: 20px; padding: 3px 10px;
+      font-size: 0.78rem; font-weight: 600;
+    }
+    .filter-badge .btn-close { filter: invert(1); width: 12px; height: 12px; }
+
+    /* ─── Price section ───────────────────────────────────────── */
+    .preco-exemplo { font-size: .8rem; border-bottom: 1px solid #f0f0f0; padding: 4px 0; }
+    .preco-exemplo:last-child { border-bottom: none; }
+
+    /* ─── Histórico table ─────────────────────────────────────── */
+    .hist-row td { padding: 6px 8px; font-size: .82rem; vertical-align: middle; }
   </style>
 </head>
 <body>
-
 <div class="d-flex" id="app-wrapper">
 
-  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <!-- ── Sidebar ────────────────────────────────────────────────────────── -->
   <nav id="sidebar" class="d-flex flex-column bg-dark text-white flex-shrink-0">
-
     <div class="sidebar-brand d-flex align-items-center justify-content-center px-3 py-2">
       <img src="/logo.png" alt="Logo" class="sidebar-logo-img sidebar-text">
-      <div class="sidebar-logo-icon">
-        <i class="bi bi-wrench-adjustable-circle"></i>
-      </div>
+      <div class="sidebar-logo-icon"><i class="bi bi-wrench-adjustable-circle"></i></div>
     </div>
 
     <ul class="nav flex-column flex-grow-1 p-2 gap-1" id="sidebarNav" style="overflow-y:auto;overflow-x:hidden">
-
       <li class="nav-item">
         <a class="nav-link active" id="navTodas" onclick="setView('todas')">
           <i class="bi bi-grid-3x3-gap nav-icon"></i>
@@ -316,6 +214,12 @@
           <span class="badge bg-danger ms-auto sidebar-text" id="badgeFora">0</span>
         </a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link" id="navMovs" onclick="setView('movimentacoes')">
+          <i class="bi bi-arrow-down-up nav-icon"></i>
+          <span class="sidebar-text ms-2">Movimentações</span>
+        </a>
+      </li>
 
       <!-- Categorias collapsible -->
       <li class="mt-2">
@@ -338,13 +242,12 @@
           <div id="sidebarFrota"></div>
         </div>
       </li>
-
     </ul>
   </nav>
 
   <div id="sidebar-overlay"></div>
 
-  <!-- ── Page Content ─────────────────────────────────────────────────────── -->
+  <!-- ── Page Content ─────────────────────────────────────────────────── -->
   <div id="content-wrapper" class="flex-grow-1 d-flex flex-column">
 
     <!-- Topbar -->
@@ -359,7 +262,10 @@
         </ol>
       </nav>
       <div class="ms-auto d-flex align-items-center gap-2">
-        <span class="text-muted small" id="topbarInfo"></span>
+        <button class="btn btn-sm" style="background:var(--brand-orange);color:#fff" onclick="openNovaPecaModal()">
+          <i class="bi bi-plus-lg me-1"></i>Nova Peça
+        </button>
+        <span class="text-muted small d-none d-md-block" id="topbarInfo"></span>
       </div>
     </div>
 
@@ -408,8 +314,15 @@
 
       <!-- ── VIEW: TODAS AS PEÇAS ── -->
       <div id="viewTodas">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h4 class="fw-bold mb-0"><i class="bi bi-grid-3x3-gap me-2 text-primary"></i>Todas as Peças</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h4 class="fw-bold mb-0"><i class="bi bi-grid-3x3-gap me-2 text-primary"></i>Todas as Peças</h4>
+            <div id="vehicleFilterBadge" class="filter-badge" style="display:none!important">
+              <i class="bi bi-truck"></i>
+              <span id="vehicleFilterText"></span>
+              <button type="button" class="btn-close" aria-label="Limpar" onclick="clearVehicleFilter()"></button>
+            </div>
+          </div>
         </div>
         <div class="card shadow-sm mb-4">
           <div class="card-body py-2">
@@ -465,8 +378,7 @@
           <h4 class="fw-bold mb-0"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Peças a Verificar</h4>
         </div>
         <div class="alert alert-warning border-0 shadow-sm small mb-3">
-          <i class="bi bi-info-circle me-1"></i>
-          Peças com identificação incompleta — verifique código, fabricante ou compatibilidade de veículo.
+          <i class="bi bi-info-circle me-1"></i>Peças com identificação incompleta — verifique código, fabricante ou compatibilidade.
         </div>
         <div id="pendentesList" class="row g-3"></div>
       </div>
@@ -477,17 +389,31 @@
           <h4 class="fw-bold mb-0"><i class="bi bi-x-circle me-2 text-danger"></i>Fora da Frota</h4>
         </div>
         <div class="alert alert-danger border-0 shadow-sm small mb-3">
-          <i class="bi bi-info-circle me-1"></i>
-          Peças sem correspondência com nenhum veículo da frota atual.
+          <i class="bi bi-info-circle me-1"></i>Peças sem correspondência com nenhum veículo da frota atual.
         </div>
         <div id="foraList" class="row g-3"></div>
+      </div>
+
+      <!-- ── VIEW: MOVIMENTAÇÕES ── -->
+      <div id="viewMovimentacoes" style="display:none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fw-bold mb-0"><i class="bi bi-arrow-down-up me-2 text-primary"></i>Histórico de Movimentações</h4>
+          <button class="btn btn-sm btn-outline-secondary" onclick="loadTodasMovimentacoes()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Atualizar
+          </button>
+        </div>
+        <div class="card shadow-sm">
+          <div class="card-body p-0">
+            <div id="movsTableWrap"></div>
+          </div>
+        </div>
       </div>
 
     </main>
   </div>
 </div>
 
-<!-- ── Modal: Detalhe da Peça ───────────────────────────────────────────── -->
+<!-- ── Modal: Detalhe da Peça ─────────────────────────────────────────── -->
 <div class="modal fade" id="modalPeca" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -499,9 +425,11 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <div class="row g-3">
+        <!-- Detalhes principais -->
+        <div class="row g-3" id="mDetalhesRow">
           <div class="col-md-5">
-            <img id="mFotoMain" class="main-photo mb-1" src="" alt="foto" onerror="this.src='';this.style.display='none';document.getElementById('mFotoPlaceholder').style.display='flex'">
+            <img id="mFotoMain" class="main-photo mb-1" src="" alt="foto"
+                 onerror="this.src='';this.style.display='none';document.getElementById('mFotoPlaceholder').style.display='flex'">
             <div id="mFotoPlaceholder" class="peca-thumb-placeholder rounded" style="display:none;height:240px">
               <i class="bi bi-image" style="font-size:3rem;color:#b0b8d0"></i>
             </div>
@@ -539,10 +467,40 @@
             </div>
           </div>
         </div>
+
+        <!-- Preço de Mercado -->
+        <div class="mt-3 pt-3 border-top">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="fw-semibold small text-muted text-uppercase" style="letter-spacing:.06em">
+              <i class="bi bi-tags me-1" style="color:var(--brand-cyan)"></i>Preço de Mercado (Mercado Livre)
+            </span>
+            <button class="btn btn-sm btn-outline-secondary" id="btnBuscarPreco" onclick="buscarPreco()">
+              <i class="bi bi-search me-1"></i>Buscar
+            </button>
+          </div>
+          <div id="precoResult" class="small text-muted">
+            Clique em "Buscar" para consultar preços no Mercado Livre.
+          </div>
+        </div>
+
+        <!-- Histórico de Baixas -->
+        <div class="mt-3 pt-3 border-top">
+          <div class="fw-semibold small text-muted text-uppercase mb-2" style="letter-spacing:.06em">
+            <i class="bi bi-clock-history me-1" style="color:var(--brand-orange)"></i>Histórico de Baixas
+          </div>
+          <div id="historicoResult">
+            <div class="text-muted small">Carregando...</div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer justify-content-between">
-        <div id="mPendenteBadge" style="display:none">
-          <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Pendente de Análise</span>
+        <div class="d-flex align-items-center gap-2">
+          <div id="mPendenteBadge" style="display:none">
+            <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Pendente de Análise</span>
+          </div>
+          <button class="btn btn-sm" style="background:var(--brand-orange);color:#fff" onclick="openBaixaModal()">
+            <i class="bi bi-box-arrow-up me-1"></i>Dar Baixa
+          </button>
         </div>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
       </div>
@@ -550,7 +508,121 @@
   </div>
 </div>
 
-<!-- ── Toast ─────────────────────────────────────────────────────────────── -->
+<!-- ── Modal: Nova Peça ────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalNovaPeca" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--brand-navy);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Nova Peça</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label">Nome *</label>
+            <input type="text" class="form-control" id="npNome" placeholder="Ex: Filtro de Óleo Motor">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Quantidade</label>
+            <input type="number" class="form-control" id="npQtd" min="0" value="1">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Código / Referência</label>
+            <input type="text" class="form-control" id="npCodigo" placeholder="Ex: A 000 477 99 15">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fabricante</label>
+            <input type="text" class="form-control" id="npFabricante" placeholder="Ex: Mercedes-Benz Original">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Categoria *</label>
+            <select class="form-select" id="npCategoria">
+              <option value="">Selecionar...</option>
+              <option>Carroceria</option>
+              <option>Elétrica e Eletrônica</option>
+              <option>Embreagem</option>
+              <option>Filtros</option>
+              <option>Freios</option>
+              <option>Motor</option>
+              <option>Suspensão e Fixação</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Veículos Compatíveis</label>
+            <div id="npVeiculosCheck" class="border rounded p-2 d-flex flex-wrap gap-2" style="min-height:42px;max-height:110px;overflow-y:auto;background:#fff"></div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Descrição</label>
+            <textarea class="form-control" id="npDescricao" rows="2" placeholder="Descrição técnica, especificações..."></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Observações</label>
+            <textarea class="form-control" id="npObs" rows="2" placeholder="Notas internas, localização no estoque..."></textarea>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="npPendente">
+              <label class="form-check-label" for="npPendente">Pendente de Análise (identificação incompleta)</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitNovaPeca()">
+          <i class="bi bi-plus-circle me-1"></i>Adicionar Peça
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Dar Baixa ───────────────────────────────────────────────── -->
+<div class="modal fade" id="modalBaixa" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--brand-orange);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-box-arrow-up me-2"></i>Dar Baixa</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-light border mb-3 small" id="baixaPecaInfo" style="background:#fff8f0;border-color:#F5941D!important"></div>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Responsável *</label>
+            <input type="text" class="form-control" id="bxResponsavel" placeholder="Nome de quem está retirando">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Veículo destino</label>
+            <select class="form-select" id="bxVeiculo">
+              <option value="">Sem veículo específico</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Quantidade *</label>
+            <input type="number" class="form-control" id="bxQtd" min="1" value="1">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Data *</label>
+            <input type="date" class="form-control" id="bxData">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Observações</label>
+            <textarea class="form-control" id="bxObs" rows="2" placeholder="Ex: Manutenção preventiva, troca por desgaste..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn fw-semibold" style="background:var(--brand-orange);color:#fff" onclick="submitBaixa()">
+          <i class="bi bi-check2-circle me-1"></i>Confirmar Baixa
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────────────────── -->
 <div id="toast" class="toast align-items-center border-0" role="alert" style="display:none">
   <div class="d-flex">
     <div class="toast-body fw-semibold" id="toastMsg"></div>
@@ -560,19 +632,21 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-/* ─── State ──────────────────────────────────────────────────────────────── */
-let allPecas  = [];
-let allFrota  = [];
-let currentId = null;
-let modalBs   = null;
+/* ─── State ────────────────────────────────────────────────────────────── */
+let allPecas       = [];
+let allFrota       = [];
+let currentId      = null;
+let vehicleFilter  = null;
+let modalBs        = null;
+let modalNovaBs    = null;
+let modalBaixaBs   = null;
 
-/* ─── Sidebar Toggle ─────────────────────────────────────────────────────── */
+/* ─── Sidebar Toggle ──────────────────────────────────────────────────── */
 (function () {
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebar-overlay');
   const btn     = document.getElementById('sidebarToggle');
   if (!sidebar || !btn) return;
-
   btn.addEventListener('click', function () {
     if (window.innerWidth <= 768) {
       sidebar.classList.toggle('mobile-open');
@@ -582,18 +656,16 @@ let modalBs   = null;
       localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
     }
   });
-
   overlay && overlay.addEventListener('click', function () {
     sidebar.classList.remove('mobile-open');
     overlay.classList.remove('active');
   });
-
   if (window.innerWidth > 768 && localStorage.getItem('sidebarCollapsed') === 'true') {
     sidebar.classList.add('collapsed');
   }
 })();
 
-/* ─── Section collapse ───────────────────────────────────────────────────── */
+/* ─── Section collapse ────────────────────────────────────────────────── */
 function toggleSection(id) {
   const collapse = document.getElementById('collapse' + id.charAt(0).toUpperCase() + id.slice(1));
   const chevron  = document.getElementById('chevron'  + id.charAt(0).toUpperCase() + id.slice(1));
@@ -626,58 +698,44 @@ function restoreSections() {
   });
 }
 
-/* ─── Category colors ─────────────────────────────────────────────────────── */
+/* ─── Colors / Icons ──────────────────────────────────────────────────── */
 const CAT_COLORS = {
-  'Filtros':                 { bg:'#1B2B6E', text:'#fff' },
-  'Freios':                  { bg:'#dc3545', text:'#fff' },
-  'Motor':                   { bg:'#d97706', text:'#fff' },
-  'Embreagem':               { bg:'#7c3aed', text:'#fff' },
-  'Suspensão e Fixação':     { bg:'#0891b2', text:'#fff' },
-  'Carroceria':              { bg:'#059669', text:'#fff' },
-  'Elétrica e Eletrônica':   { bg:'#ea580c', text:'#fff' },
+  'Filtros':               { bg:'#1B2B6E', text:'#fff' },
+  'Freios':                { bg:'#dc3545', text:'#fff' },
+  'Motor':                 { bg:'#d97706', text:'#fff' },
+  'Embreagem':             { bg:'#7c3aed', text:'#fff' },
+  'Suspensão e Fixação':   { bg:'#0891b2', text:'#fff' },
+  'Carroceria':            { bg:'#059669', text:'#fff' },
+  'Elétrica e Eletrônica': { bg:'#ea580c', text:'#fff' },
 };
 const CAT_ICONS = {
-  'Filtros':               'bi-funnel',
-  'Freios':                'bi-octagon',
-  'Motor':                 'bi-gear',
-  'Embreagem':             'bi-circle-half',
-  'Suspensão e Fixação':   'bi-arrows-angle-expand',
-  'Carroceria':            'bi-car-front',
-  'Elétrica e Eletrônica': 'bi-lightning-charge',
+  'Filtros':'bi-funnel','Freios':'bi-octagon','Motor':'bi-gear',
+  'Embreagem':'bi-circle-half','Suspensão e Fixação':'bi-arrows-angle-expand',
+  'Carroceria':'bi-car-front','Elétrica e Eletrônica':'bi-lightning-charge',
 };
+function catColor(cat) { return CAT_COLORS[cat] || { bg:'#6c757d', text:'#fff' }; }
+function catIcon(cat)  { return CAT_ICONS[cat]  || 'bi-box'; }
 
-function catColor(cat) { return (CAT_COLORS[cat] || { bg:'#6c757d', text:'#fff' }); }
-function catIcon(cat)  { return (CAT_ICONS[cat]  || 'bi-box'); }
-
-/* ─── Card renderer ───────────────────────────────────────────────────────── */
+/* ─── Card renderer ───────────────────────────────────────────────────── */
 function buildCard(p) {
   const col = document.createElement('div');
   col.className = 'col-6 col-md-4 col-xl-3';
-
   const fotoSrc = p.fotos && p.fotos.length ? `/fotos/${p.fotos[0]}` : '';
   const imgHtml = fotoSrc
     ? `<img src="${fotoSrc}" class="peca-thumb" alt="${p.nome}"
-            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
-            loading="lazy">
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
        <div class="peca-thumb-placeholder" style="display:none"><i class="bi bi-image"></i></div>`
     : `<div class="peca-thumb-placeholder"><i class="bi bi-image"></i></div>`;
-
   const cc = catColor(p.categoria);
-  const veics = p.veiculos_compativeis.slice(0,3).map(v => {
-    const placa = v.split(' ')[0];
-    return `<span class="badge rounded-pill" style="background:#e8eaf0;color:#3a3f5c;font-size:.65rem">${placa}</span>`;
-  }).join('');
+  const veics = p.veiculos_compativeis.slice(0,3).map(v =>
+    `<span class="badge rounded-pill" style="background:#e8eaf0;color:#3a3f5c;font-size:.65rem">${v.split(' ')[0]}</span>`
+  ).join('');
   const more = p.veiculos_compativeis.length > 3
-    ? `<span class="badge rounded-pill bg-secondary" style="font-size:.65rem">+${p.veiculos_compativeis.length-3}</span>`
-    : '';
-
+    ? `<span class="badge rounded-pill bg-secondary" style="font-size:.65rem">+${p.veiculos_compativeis.length-3}</span>` : '';
   const pendBadge = p.pendente_analise
-    ? `<span class="badge bg-warning text-dark" style="font-size:.65rem"><i class="bi bi-exclamation-triangle me-1"></i>A verificar</span>`
-    : '';
+    ? `<span class="badge bg-warning text-dark" style="font-size:.65rem"><i class="bi bi-exclamation-triangle me-1"></i>A verificar</span>` : '';
   const foraBadge = p.veiculos_compativeis.length === 0
-    ? `<span class="badge bg-danger" style="font-size:.65rem"><i class="bi bi-x-circle me-1"></i>Sem veículo</span>`
-    : '';
-
+    ? `<span class="badge bg-danger" style="font-size:.65rem"><i class="bi bi-x-circle me-1"></i>Sem veículo</span>` : '';
   col.innerHTML = `
     <div class="card shadow-sm h-100 peca-card" onclick="openModal('${p.id}')">
       ${imgHtml}
@@ -688,9 +746,7 @@ function buildCard(p) {
         <h6 class="fw-semibold mb-1 lh-sm" style="font-size:.88rem">${p.nome}</h6>
         <div class="text-muted small mb-2" style="font-size:.76rem">${p.fabricante}</div>
         <div class="d-flex align-items-center justify-content-between">
-          <span class="badge rounded-pill" style="background:var(--brand-navy);color:#fff;font-size:.75rem">
-            ${p.quantidade} un.
-          </span>
+          <span class="badge rounded-pill" style="background:var(--brand-navy);color:#fff;font-size:.75rem">${p.quantidade} un.</span>
           <div class="d-flex gap-1 flex-wrap justify-content-end">${veics}${more}</div>
         </div>
         ${(pendBadge || foraBadge) ? `<div class="mt-2 d-flex gap-1">${pendBadge}${foraBadge}</div>` : ''}
@@ -699,18 +755,17 @@ function buildCard(p) {
   return col;
 }
 
-/* ─── Filter / sort ─────────────────────────────────────────────────────── */
+/* ─── Filter / sort ───────────────────────────────────────────────────── */
 function filterPecas() {
   const q    = (document.getElementById('searchInput').value || '').toLowerCase();
   const sort = document.getElementById('sortSelect').value;
 
-  let list = allPecas.filter(p =>
-    !q ||
-    p.nome.toLowerCase().includes(q) ||
-    p.descricao.toLowerCase().includes(q) ||
-    p.codigo.toLowerCase().includes(q) ||
-    p.fabricante.toLowerCase().includes(q)
-  );
+  let list = allPecas.filter(p => {
+    if (vehicleFilter && !p.veiculos_compativeis.some(v => v.includes(vehicleFilter.toUpperCase()))) return false;
+    if (!q) return true;
+    return p.nome.toLowerCase().includes(q) || p.descricao.toLowerCase().includes(q) ||
+           p.codigo.toLowerCase().includes(q) || p.fabricante.toLowerCase().includes(q);
+  });
 
   list = list.slice().sort((a,b) => {
     if (sort === 'quantidade') return b.quantidade - a.quantidade;
@@ -727,9 +782,39 @@ function filterPecas() {
   document.getElementById('resultCount').textContent = `${list.length} peça${list.length !== 1 ? 's' : ''}`;
 }
 
-/* ─── Views ─────────────────────────────────────────────────────────────── */
-const VIEWS = ['todas','veiculos','pendentes','fora'];
-const VIEW_LABELS = { todas:'Todas as Peças', veiculos:'Por Veículo', pendentes:'A Verificar', fora:'Fora da Frota' };
+/* ─── Vehicle filter ──────────────────────────────────────────────────── */
+function filterByVeiculo(placa) {
+  vehicleFilter = placa;
+  document.getElementById('searchInput').value = '';
+  updateVehicleFilterUI();
+  document.querySelectorAll('#sidebarFrota .nav-link').forEach(el => {
+    el.classList.toggle('active', el.dataset.placa === placa);
+  });
+  setView('todas');
+}
+
+function clearVehicleFilter() {
+  vehicleFilter = null;
+  document.querySelectorAll('#sidebarFrota .nav-link').forEach(el => el.classList.remove('active'));
+  updateVehicleFilterUI();
+  filterPecas();
+}
+
+function updateVehicleFilterUI() {
+  const badge = document.getElementById('vehicleFilterBadge');
+  const text  = document.getElementById('vehicleFilterText');
+  if (vehicleFilter) {
+    const v = allFrota.find(f => f.placa.toUpperCase() === vehicleFilter.toUpperCase());
+    text.textContent = vehicleFilter + (v ? ' — ' + v.modelo.split(' ').slice(0,2).join(' ') : '');
+    badge.style.removeProperty('display');
+  } else {
+    badge.style.setProperty('display','none','important');
+  }
+}
+
+/* ─── Views ───────────────────────────────────────────────────────────── */
+const VIEWS = ['todas','veiculos','pendentes','fora','movimentacoes'];
+const VIEW_LABELS = { todas:'Todas as Peças', veiculos:'Por Veículo', pendentes:'A Verificar', fora:'Fora da Frota', movimentacoes:'Movimentações' };
 
 function setView(v) {
   VIEWS.forEach(id => {
@@ -738,10 +823,12 @@ function setView(v) {
     if (nav) nav.classList.toggle('active', id === v);
   });
   document.getElementById('breadcrumbActive').textContent = VIEW_LABELS[v] || v;
-  if (v === 'todas')    filterPecas();
-  if (v === 'pendentes') renderList('pendentesList', allPecas.filter(p => p.pendente_analise));
-  if (v === 'fora')      renderList('foraList',      allPecas.filter(p => p.veiculos_compativeis.length === 0));
-  if (v === 'veiculos')  renderVeiculos();
+  if (v === 'todas')         filterPecas();
+  if (v === 'pendentes')     renderList('pendentesList', allPecas.filter(p => p.pendente_analise));
+  if (v === 'fora')          renderList('foraList', allPecas.filter(p => p.veiculos_compativeis.length === 0));
+  if (v === 'veiculos')      renderVeiculos();
+  if (v === 'movimentacoes') loadTodasMovimentacoes();
+  if (v !== 'todas' && vehicleFilter) { vehicleFilter = null; updateVehicleFilterUI(); }
 }
 
 function renderList(containerId, list) {
@@ -750,19 +837,14 @@ function renderList(containerId, list) {
   list.forEach(p => c.appendChild(buildCard(p)));
 }
 
-/* ─── Vehicle view ─────────────────────────────────────────────────────── */
+/* ─── Vehicle view ────────────────────────────────────────────────────── */
 function renderVeiculos() {
   const list = document.getElementById('veiculosList');
   const det  = document.getElementById('veiculoPecas');
-  list.style.display = '';
-  det.style.display  = 'none';
+  list.style.display = ''; det.style.display = 'none';
   list.innerHTML = '';
-
   allFrota.forEach(v => {
-    const pecas = allPecas.filter(p =>
-      p.veiculos_compativeis.some(vc => vc.includes(v.placa.toUpperCase()))
-    );
-    const modeloTag = v.modelo.split(' ').slice(0,2).join(' ');
+    const pecas = allPecas.filter(p => p.veiculos_compativeis.some(vc => vc.includes(v.placa.toUpperCase())));
     const col = document.createElement('div');
     col.className = 'col-12 col-md-6 col-xl-4';
     col.innerHTML = `
@@ -787,18 +869,13 @@ function renderVeiculos() {
 
 function showVeiculoPecas(placa) {
   const veiculo = allFrota.find(v => v.placa.toUpperCase() === placa.toUpperCase());
-  const pecas   = allPecas.filter(p =>
-    p.veiculos_compativeis.some(v => v.includes(placa.toUpperCase()))
-  );
-
-  document.getElementById('veiculosList').style.display  = 'none';
+  const pecas   = allPecas.filter(p => p.veiculos_compativeis.some(v => v.includes(placa.toUpperCase())));
+  document.getElementById('veiculosList').style.display = 'none';
   const det = document.getElementById('veiculoPecas');
   det.style.display = '';
-
   document.getElementById('veiculoTitle').innerHTML =
     `<i class="bi bi-truck me-2 text-primary"></i>${veiculo ? veiculo.modelo : placa} — ${placa}
      <span class="badge ms-2" style="background:var(--brand-navy);color:#fff">${pecas.length} peças</span>`;
-
   const grid = document.getElementById('veiculoPecasGrid');
   grid.innerHTML = '';
   pecas.forEach(p => grid.appendChild(buildCard(p)));
@@ -809,7 +886,7 @@ function backToVeiculos() {
   document.getElementById('veiculoPecas').style.display = 'none';
 }
 
-/* ─── Modal ──────────────────────────────────────────────────────────────── */
+/* ─── Modal detalhe ───────────────────────────────────────────────────── */
 function openModal(id) {
   const p = allPecas.find(x => x.id === id);
   if (!p) return;
@@ -824,66 +901,55 @@ function openModal(id) {
 
   const cc = catColor(p.categoria);
   const badge = document.getElementById('mCatBadge');
-  badge.textContent  = p.categoria;
-  badge.style.background = cc.bg;
-  badge.style.color      = cc.text;
+  badge.textContent = p.categoria;
+  badge.style.background = cc.bg; badge.style.color = cc.text;
 
   const veicsEl = document.getElementById('mVeiculos');
   veicsEl.innerHTML = p.veiculos_compativeis.length
-    ? p.veiculos_compativeis.map(v =>
-        `<span class="badge rounded-pill" style="background:#e8eaf0;color:#3a3f5c">${v}</span>`
-      ).join('')
+    ? p.veiculos_compativeis.map(v => `<span class="badge rounded-pill" style="background:#e8eaf0;color:#3a3f5c">${v}</span>`).join('')
     : '<span class="text-muted small">Nenhum veículo associado</span>';
 
   const obsWrap = document.getElementById('mObsWrap');
-  if (p.observacoes) {
-    document.getElementById('mObs').textContent = p.observacoes;
-    obsWrap.style.display = '';
-  } else { obsWrap.style.display = 'none'; }
+  if (p.observacoes) { document.getElementById('mObs').textContent = p.observacoes; obsWrap.style.display = ''; }
+  else { obsWrap.style.display = 'none'; }
 
   document.getElementById('mPendenteBadge').style.display = p.pendente_analise ? '' : 'none';
 
-  // Photos
   const mainImg = document.getElementById('mFotoMain');
   const placeholder = document.getElementById('mFotoPlaceholder');
   const thumbs = document.getElementById('mThumbs');
   thumbs.innerHTML = '';
-
   if (p.fotos && p.fotos.length) {
     mainImg.src = `/fotos/${p.fotos[0]}`;
-    mainImg.style.display = '';
-    placeholder.style.display = 'none';
+    mainImg.style.display = ''; placeholder.style.display = 'none';
     p.fotos.forEach((f, i) => {
       const img = document.createElement('img');
-      img.src = `/fotos/${f}`;
-      img.className = i === 0 ? 'active' : '';
+      img.src = `/fotos/${f}`; img.className = i === 0 ? 'active' : '';
       img.onclick = () => {
-        mainImg.src = `/fotos/${f}`;
-        mainImg.style.display = '';
-        placeholder.style.display = 'none';
+        mainImg.src = `/fotos/${f}`; mainImg.style.display = ''; placeholder.style.display = 'none';
         thumbs.querySelectorAll('img').forEach(t => t.classList.remove('active'));
         img.classList.add('active');
       };
       thumbs.appendChild(img);
     });
-  } else {
-    mainImg.style.display = 'none';
-    placeholder.style.display = 'flex';
-  }
+  } else { mainImg.style.display = 'none'; placeholder.style.display = 'flex'; }
+
+  // Reset price/history sections
+  document.getElementById('precoResult').innerHTML = 'Clique em "Buscar" para consultar preços no Mercado Livre.';
+  document.getElementById('historicoResult').innerHTML = '<div class="text-muted small">Carregando...</div>';
 
   if (!modalBs) modalBs = new bootstrap.Modal(document.getElementById('modalPeca'));
   modalBs.show();
+  loadHistorico(id);
 }
 
-/* ─── Quantity update ─────────────────────────────────────────────────────── */
+/* ─── Quantity update ─────────────────────────────────────────────────── */
 function changeQty(delta) {
   const p = allPecas.find(x => x.id === currentId);
   if (!p) return;
   const newQty = Math.max(0, p.quantidade + delta);
-
   fetch(`/api/pecas/${currentId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quantidade: newQty })
   })
   .then(r => r.json())
@@ -897,7 +963,280 @@ function changeQty(delta) {
   .catch(() => showToast('Erro ao atualizar.', 'danger'));
 }
 
-/* ─── Toast ──────────────────────────────────────────────────────────────── */
+/* ─── Buscar Preço ────────────────────────────────────────────────────── */
+function buscarPreco() {
+  if (!currentId) return;
+  const btn = document.getElementById('btnBuscarPreco');
+  const res = document.getElementById('precoResult');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Buscando...';
+  res.innerHTML = '<span class="text-muted small">Consultando Mercado Livre...</span>';
+
+  fetch(`/api/preco/${currentId}`)
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false; btn.innerHTML = '<i class="bi bi-search me-1"></i>Buscar';
+      if (!data.found) {
+        res.innerHTML = '<span class="text-muted small"><i class="bi bi-info-circle me-1"></i>Sem resultados encontrados.</span>';
+        return;
+      }
+      const fmt = v => v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+      const exemplos = (data.exemplos || []).map(e =>
+        `<div class="preco-exemplo d-flex justify-content-between align-items-start">
+           <a href="${e.url}" target="_blank" class="text-truncate me-2" style="max-width:300px;font-size:.78rem">${e.titulo}</a>
+           <span class="fw-semibold text-nowrap" style="color:var(--brand-navy)">${fmt(e.preco)}</span>
+         </div>`
+      ).join('');
+      res.innerHTML = `
+        <div class="row g-2 mb-2">
+          <div class="col-4 text-center">
+            <div class="fw-bold fs-5" style="color:var(--brand-navy)">${fmt(data.media)}</div>
+            <div class="text-muted" style="font-size:.7rem">MÉDIA</div>
+          </div>
+          <div class="col-4 text-center">
+            <div class="fw-bold fs-6 text-success">${fmt(data.minimo)}</div>
+            <div class="text-muted" style="font-size:.7rem">MÍNIMO</div>
+          </div>
+          <div class="col-4 text-center">
+            <div class="fw-bold fs-6 text-danger">${fmt(data.maximo)}</div>
+            <div class="text-muted" style="font-size:.7rem">MÁXIMO</div>
+          </div>
+        </div>
+        <div class="text-muted mb-1" style="font-size:.72rem">${data.amostras} resultados analisados</div>
+        ${exemplos}`;
+    })
+    .catch(() => {
+      btn.disabled = false; btn.innerHTML = '<i class="bi bi-search me-1"></i>Buscar';
+      res.innerHTML = '<span class="text-danger small">Erro ao consultar. Verifique a conexão.</span>';
+    });
+}
+
+/* ─── Histórico de Baixas ─────────────────────────────────────────────── */
+function loadHistorico(id) {
+  const pecaId = id || currentId;
+  if (!pecaId) return;
+  fetch(`/api/movimentacoes/peca/${pecaId}`)
+    .then(r => r.json())
+    .then(data => {
+      const el = document.getElementById('historicoResult');
+      if (!data.movimentacoes || !data.movimentacoes.length) {
+        el.innerHTML = '<span class="text-muted small">Nenhuma baixa registrada.</span>';
+        return;
+      }
+      const rows = data.movimentacoes.map(m => `
+        <tr class="hist-row">
+          <td>${new Date(m.data + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+          <td class="fw-semibold">${m.responsavel}</td>
+          <td>${m.veiculo || '<span class="text-muted">—</span>'}</td>
+          <td class="text-center"><span class="badge" style="background:var(--brand-orange)">${m.quantidade}</span></td>
+          <td class="text-muted">${m.observacoes || ''}</td>
+        </tr>`).join('');
+      el.innerHTML = `
+        <table class="table table-sm table-hover mb-0">
+          <thead><tr style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:#8a92b2">
+            <th>Data</th><th>Responsável</th><th>Veículo</th><th class="text-center">Qtd</th><th>Obs</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    })
+    .catch(() => {
+      document.getElementById('historicoResult').innerHTML = '<span class="text-muted small">Erro ao carregar histórico.</span>';
+    });
+}
+
+/* ─── Modal Dar Baixa ─────────────────────────────────────────────────── */
+function openBaixaModal() {
+  const p = allPecas.find(x => x.id === currentId);
+  if (!p) return;
+
+  const cc = catColor(p.categoria);
+  document.getElementById('baixaPecaInfo').innerHTML =
+    `<span class="badge me-2" style="background:${cc.bg};color:${cc.text}">${p.categoria}</span>
+     <strong>${p.nome}</strong>
+     ${p.codigo ? `<span class="text-muted ms-2 small">${p.codigo}</span>` : ''}
+     <br><span class="mt-1 d-inline-block text-muted">Estoque atual: <strong style="color:var(--brand-navy)">${p.quantidade} un.</strong></span>`;
+
+  document.getElementById('bxResponsavel').value = '';
+  document.getElementById('bxQtd').value = 1;
+  document.getElementById('bxQtd').max = p.quantidade;
+  document.getElementById('bxObs').value = '';
+  document.getElementById('bxData').value = new Date().toISOString().split('T')[0];
+
+  // Populate vehicle select with compatible vehicles first
+  const sel = document.getElementById('bxVeiculo');
+  sel.innerHTML = '<option value="">Sem veículo específico</option>';
+  const compat = p.veiculos_compativeis;
+  if (compat.length) {
+    const grp = document.createElement('optgroup');
+    grp.label = 'Compatíveis com esta peça';
+    compat.forEach(v => { const opt = document.createElement('option'); opt.value = v; opt.textContent = v; grp.appendChild(opt); });
+    sel.appendChild(grp);
+  }
+  const outros = allFrota.filter(f => !compat.includes(f.placa));
+  if (outros.length) {
+    const grp2 = document.createElement('optgroup');
+    grp2.label = 'Outros veículos';
+    outros.forEach(f => { const opt = document.createElement('option'); opt.value = f.placa; opt.textContent = `${f.placa} — ${f.modelo}`; grp2.appendChild(opt); });
+    sel.appendChild(grp2);
+  }
+
+  if (!modalBaixaBs) modalBaixaBs = new bootstrap.Modal(document.getElementById('modalBaixa'));
+  if (modalBs) modalBs.hide();
+  setTimeout(() => modalBaixaBs.show(), 300);
+}
+
+function submitBaixa() {
+  const responsavel = document.getElementById('bxResponsavel').value.trim();
+  const qtd = parseInt(document.getElementById('bxQtd').value);
+  const data = document.getElementById('bxData').value;
+
+  if (!responsavel) { document.getElementById('bxResponsavel').focus(); return; }
+  if (!qtd || qtd < 1) { document.getElementById('bxQtd').focus(); return; }
+
+  const payload = {
+    peca_id: currentId,
+    responsavel,
+    veiculo: document.getElementById('bxVeiculo').value,
+    quantidade: qtd,
+    data,
+    observacoes: document.getElementById('bxObs').value.trim()
+  };
+
+  fetch('/api/movimentacoes', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.success) {
+      const p = allPecas.find(x => x.id === currentId);
+      if (p) p.quantidade = res.nova_quantidade;
+      if (modalBaixaBs) modalBaixaBs.hide();
+      showToast(`Baixa registrada! Estoque: ${res.nova_quantidade} un.`, 'success');
+    } else {
+      showToast(res.error || 'Erro ao registrar baixa.', 'danger');
+    }
+  })
+  .catch(() => showToast('Erro ao registrar baixa.', 'danger'));
+}
+
+/* ─── Nova Peça ───────────────────────────────────────────────────────── */
+function openNovaPecaModal() {
+  document.getElementById('npNome').value = '';
+  document.getElementById('npCodigo').value = '';
+  document.getElementById('npFabricante').value = '';
+  document.getElementById('npCategoria').value = '';
+  document.getElementById('npQtd').value = 1;
+  document.getElementById('npDescricao').value = '';
+  document.getElementById('npObs').value = '';
+  document.getElementById('npPendente').checked = false;
+
+  // Build vehicle checkboxes
+  const wrap = document.getElementById('npVeiculosCheck');
+  wrap.innerHTML = '';
+  allFrota.forEach(v => {
+    const id = 'npV_' + v.placa;
+    const label = document.createElement('label');
+    label.className = 'form-check-label d-flex align-items-center gap-1 small';
+    label.style.cursor = 'pointer';
+    label.innerHTML = `<input type="checkbox" class="form-check-input" id="${id}" value="${v.placa}" style="margin:0">
+                       <span>${v.placa}</span>`;
+    wrap.appendChild(label);
+  });
+
+  if (!modalNovaBs) modalNovaBs = new bootstrap.Modal(document.getElementById('modalNovaPeca'));
+  modalNovaBs.show();
+}
+
+function submitNovaPeca() {
+  const nome = document.getElementById('npNome').value.trim();
+  const categoria = document.getElementById('npCategoria').value;
+  if (!nome) { document.getElementById('npNome').focus(); return; }
+  if (!categoria) { document.getElementById('npCategoria').focus(); return; }
+
+  const checkedVeics = [...document.querySelectorAll('#npVeiculosCheck input:checked')].map(el => {
+    const frota = allFrota.find(f => f.placa === el.value);
+    return frota ? `${frota.placa} ${frota.modelo}` : el.value;
+  });
+
+  const payload = {
+    nome, codigo: document.getElementById('npCodigo').value.trim(),
+    fabricante: document.getElementById('npFabricante').value.trim(),
+    categoria, descricao: document.getElementById('npDescricao').value.trim(),
+    observacoes: document.getElementById('npObs').value.trim(),
+    veiculos_compativeis: checkedVeics,
+    quantidade: parseInt(document.getElementById('npQtd').value) || 0,
+    pendente_analise: document.getElementById('npPendente').checked
+  };
+
+  fetch('/api/pecas', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.success) {
+      allPecas.push(res.peca);
+      if (modalNovaBs) modalNovaBs.hide();
+      reloadStats();
+      filterPecas();
+      showToast(`Peça "${res.peca.nome}" adicionada!`, 'success');
+    } else {
+      showToast(res.error || 'Erro ao criar peça.', 'danger');
+    }
+  })
+  .catch(() => showToast('Erro ao criar peça.', 'danger'));
+}
+
+/* ─── Todas as Movimentações ──────────────────────────────────────────── */
+function loadTodasMovimentacoes() {
+  const wrap = document.getElementById('movsTableWrap');
+  wrap.innerHTML = '<div class="p-4 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>';
+  fetch('/api/movimentacoes')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.movimentacoes || !data.movimentacoes.length) {
+        wrap.innerHTML = '<div class="p-4 text-center text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Nenhuma movimentação registrada.</div>';
+        return;
+      }
+      const rows = data.movimentacoes.map(m => `
+        <tr>
+          <td>${new Date(m.data + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+          <td><a href="#" onclick="openModal('${m.peca_id}');return false" class="fw-semibold">${m.peca_nome}</a>
+              ${m.peca_codigo ? `<div class="text-muted" style="font-size:.75rem">${m.peca_codigo}</div>` : ''}
+          </td>
+          <td>${m.responsavel}</td>
+          <td>${m.veiculo || '<span class="text-muted">—</span>'}</td>
+          <td class="text-center"><span class="badge" style="background:var(--brand-orange)">${m.quantidade}</span></td>
+          <td class="text-muted small">${m.observacoes || ''}</td>
+        </tr>`).join('');
+      wrap.innerHTML = `
+        <div class="table-responsive">
+          <table class="table table-hover table-sm mb-0">
+            <thead class="table-dark"><tr>
+              <th>Data</th><th>Peça</th><th>Responsável</th><th>Veículo</th><th class="text-center">Qtd</th><th>Obs</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    })
+    .catch(() => { wrap.innerHTML = '<div class="p-4 text-danger">Erro ao carregar movimentações.</div>'; });
+}
+
+/* ─── Reload stats ────────────────────────────────────────────────────── */
+function reloadStats() {
+  fetch('/api/stats').then(r => r.json()).then(stats => {
+    document.getElementById('kpiItens').textContent     = stats.total_itens     || 0;
+    document.getElementById('kpiUnidades').textContent  = stats.total_unidades  || 0;
+    document.getElementById('kpiPendentes').textContent = stats.pendentes_analise|| 0;
+    document.getElementById('kpiFora').textContent      = stats.fora_da_frota   || 0;
+    document.getElementById('badgePendentes').textContent = stats.pendentes_analise || 0;
+    document.getElementById('badgeFora').textContent      = stats.fora_da_frota    || 0;
+    document.getElementById('badgeTodas').textContent     = allPecas.length;
+  });
+}
+
+/* ─── Toast ───────────────────────────────────────────────────────────── */
 let toastTimer = null;
 function showToast(msg, type) {
   const el = document.getElementById('toast');
@@ -905,13 +1244,11 @@ function showToast(msg, type) {
   document.getElementById('toastMsg').textContent = msg;
   el.style.display = 'block';
   if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(hideToast, 3000);
+  toastTimer = setTimeout(hideToast, 3500);
 }
-function hideToast() {
-  document.getElementById('toast').style.display = 'none';
-}
+function hideToast() { document.getElementById('toast').style.display = 'none'; }
 
-/* ─── Sidebar dynamic ─────────────────────────────────────────────────────── */
+/* ─── Sidebar dynamic ─────────────────────────────────────────────────── */
 function buildSidebarCats(cats) {
   const el = document.getElementById('sidebarCats');
   el.innerHTML = '';
@@ -939,7 +1276,7 @@ function buildSidebarFrota(frota) {
     li.className = 'nav-item';
     const modelo = v.modelo.replace('VW/','').split(' ').slice(0,2).join(' ');
     li.innerHTML = `
-      <a class="nav-link" onclick="setView('veiculos');setTimeout(()=>showVeiculoPecas('${v.placa}'),50)">
+      <a class="nav-link" data-placa="${v.placa}" onclick="filterByVeiculo('${v.placa}')">
         <i class="bi bi-truck nav-icon"></i>
         <span class="sidebar-text ms-2" style="flex:1;overflow:hidden;text-overflow:ellipsis">${v.placa}</span>
         <span class="badge ms-1 sidebar-text" style="background:rgba(255,255,255,0.15);font-size:.62rem;flex-shrink:0">${modelo}</span>
@@ -949,18 +1286,18 @@ function buildSidebarFrota(frota) {
 }
 
 function filterByCategoria(cat) {
+  vehicleFilter = null;
+  updateVehicleFilterUI();
   setView('todas');
   document.getElementById('searchInput').value = cat;
   filterPecas();
 }
 
-/* ─── Init ────────────────────────────────────────────────────────────────── */
+/* ─── Init ────────────────────────────────────────────────────────────── */
 async function init() {
   const [pecasRes, frotaRes, statsRes, catsRes] = await Promise.all([
-    fetch('/api/pecas'),
-    fetch('/api/frota'),
-    fetch('/api/stats'),
-    fetch('/api/categorias'),
+    fetch('/api/pecas'), fetch('/api/frota'),
+    fetch('/api/stats'), fetch('/api/categorias'),
   ]);
   const pecasData = await pecasRes.json();
   const frotaData = await frotaRes.json();
@@ -970,18 +1307,14 @@ async function init() {
   allPecas = pecasData.pecas || [];
   allFrota = frotaData.frota || [];
 
-  // KPIs
   document.getElementById('kpiItens').textContent     = stats.total_itens     || 0;
   document.getElementById('kpiUnidades').textContent  = stats.total_unidades  || 0;
   document.getElementById('kpiPendentes').textContent = stats.pendentes_analise|| 0;
   document.getElementById('kpiFora').textContent      = stats.fora_da_frota   || 0;
-
-  // Sidebar badges
   document.getElementById('badgeTodas').textContent    = allPecas.length;
   document.getElementById('badgePendentes').textContent = stats.pendentes_analise || 0;
   document.getElementById('badgeFora').textContent      = stats.fora_da_frota    || 0;
 
-  // Topbar info
   const now = new Date();
   document.getElementById('topbarInfo').textContent =
     now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' +
@@ -994,9 +1327,7 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && modalBs) modalBs.hide();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalBs) modalBs.hide(); });
 </script>
 </body>
 </html>
