@@ -235,6 +235,9 @@
         </ol>
       </nav>
       <div class="ms-auto d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex align-items-center gap-1" onclick="gerarRelatorio()">
+          <i class="bi bi-printer"></i><span class="d-none d-md-inline">Relatório</span>
+        </button>
         <button class="btn btn-sm fw-semibold" style="background:var(--brand-orange);color:#fff" onclick="openNovaPecaModal()">
           <i class="bi bi-plus-lg me-1"></i>Nova Peça
         </button>
@@ -1226,6 +1229,112 @@ function showToast(msg,type){
   toastTimer=setTimeout(hideToast,3500);
 }
 function hideToast(){document.getElementById('toast').style.display='none';}
+
+/* ─── Relatório PDF ───────────────────────────────────────────────────── */
+function gerarRelatorio(){
+  const fmt=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const hoje=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  // Agrupa peças por veículo
+  const secoes=[];
+  allFrota.forEach(v=>{
+    const pecas=allPecas
+      .filter(p=>p.veiculos_compativeis.some(vc=>vc.toUpperCase().includes(v.placa.toUpperCase())))
+      .sort((a,b)=>a.categoria.localeCompare(b.categoria)||a.nome.localeCompare(b.nome));
+    if(pecas.length) secoes.push({titulo:`${v.placa} — ${v.modelo}`, pecas});
+  });
+  // Peças sem veículo
+  const semVeiculo=allPecas.filter(p=>p.veiculos_compativeis.length===0).sort((a,b)=>a.nome.localeCompare(b.nome));
+  if(semVeiculo.length) secoes.push({titulo:'Sem Veículo Associado', pecas:semVeiculo, aviso:true});
+
+  function linhasSecao(s){
+    let catAtual='';
+    return s.pecas.map((p,i)=>{
+      const catRow=p.categoria!==catAtual
+        ?`<tr><td colspan="6" style="background:#1B2B6E;color:#fff;font-size:9px;text-transform:uppercase;letter-spacing:.1em;padding:3px 6px;font-weight:600">${p.categoria}</td></tr>`
+        :'';
+      catAtual=p.categoria;
+      const precoCell=p.preco_referencia?`<span style="color:#1B2B6E;font-weight:600">${fmt(p.preco_referencia)}</span>`:'—';
+      const qtdColor=p.quantidade===0?'color:#dc3545;font-weight:700':p.quantidade<=2?'color:#d97706;font-weight:600':'color:#059669;font-weight:600';
+      const pendBadge=p.pendente_analise?'<span style="background:#ffc107;color:#000;border-radius:3px;padding:1px 4px;font-size:7px;margin-left:3px">⚠ VERIFICAR</span>':'';
+      return catRow+`<tr style="background:${i%2===0?'#fff':'#f8f9fb'}">
+        <td style="padding:4px 6px;font-size:9px;color:#666">${p.codigo||'—'}</td>
+        <td style="padding:4px 6px;font-size:9.5px;font-weight:500">${p.nome}${pendBadge}</td>
+        <td style="padding:4px 6px;font-size:9px;color:#555">${p.fabricante!=='Não identificado'?p.fabricante:'—'}</td>
+        <td style="padding:4px 6px;font-size:10px;text-align:center;${qtdColor}">${p.quantidade}</td>
+        <td style="padding:4px 6px;font-size:9px;text-align:right">${precoCell}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const totalPecas=allPecas.length;
+  const totalUnidades=allPecas.reduce((s,p)=>s+p.quantidade,0);
+  const pendentes=allPecas.filter(p=>p.pendente_analise).length;
+
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Estoque de Peças — ${hoje}</title>
+<style>
+  @page { size:A4; margin:12mm 10mm 12mm 10mm; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:10px;color:#222;background:#fff}
+  .cabecalho{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1B2B6E;padding-bottom:8px;margin-bottom:10px}
+  .cabecalho-titulo{font-size:16px;font-weight:700;color:#1B2B6E;letter-spacing:-.3px}
+  .cabecalho-sub{font-size:9px;color:#666;margin-top:2px}
+  .resumo{display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+  .resumo-item{background:#f0f2f7;border-left:3px solid #1B2B6E;padding:4px 10px;border-radius:3px}
+  .resumo-item b{display:block;font-size:13px;color:#1B2B6E}
+  .resumo-item span{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#666}
+  .secao{margin-bottom:14px;page-break-inside:avoid}
+  .secao-titulo{background:#F5941D;color:#fff;font-size:10px;font-weight:700;padding:5px 8px;border-radius:4px 4px 0 0;display:flex;align-items:center;gap:6px}
+  .secao-titulo.aviso-titulo{background:#6c757d}
+  table{width:100%;border-collapse:collapse;border:1px solid #ddd;border-top:none}
+  thead tr{background:#e8eaf0}
+  th{padding:4px 6px;font-size:8.5px;text-transform:uppercase;letter-spacing:.07em;color:#555;font-weight:600;border-bottom:1px solid #ccc}
+  td{border-bottom:1px solid #eee;vertical-align:middle}
+  .rodape{margin-top:10px;border-top:1px solid #ddd;padding-top:6px;font-size:8px;color:#999;display:flex;justify-content:space-between}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<div class="cabecalho">
+  <div>
+    <div class="cabecalho-titulo">&#x1F527; Estoque de Peças — Frota</div>
+    <div class="cabecalho-sub">Gerado em ${hoje} &nbsp;|&nbsp; ${allFrota.length} veículo(s) &nbsp;|&nbsp; Uso: cole na porta do armário de peças</div>
+  </div>
+  <div style="text-align:right;font-size:8px;color:#999">pecas-frota</div>
+</div>
+<div class="resumo">
+  <div class="resumo-item"><b>${totalPecas}</b><span>Itens</span></div>
+  <div class="resumo-item"><b>${totalUnidades}</b><span>Unidades</span></div>
+  <div class="resumo-item"><b style="color:${pendentes>0?'#d97706':'#059669'}">${pendentes}</b><span>A verificar</span></div>
+  <div class="resumo-item" style="border-left-color:#F5941D"><b style="color:#F5941D">${secoes.length}</b><span>Seções</span></div>
+</div>
+${secoes.map(s=>`
+<div class="secao">
+  <div class="secao-titulo${s.aviso?' aviso-titulo':''}">
+    &#x1F69A; ${s.titulo}
+    <span style="margin-left:auto;font-size:8px;opacity:.85;font-weight:400">${s.pecas.length} item(ns)</span>
+  </div>
+  <table>
+    <thead><tr>
+      <th style="width:90px">Código</th>
+      <th>Descrição</th>
+      <th style="width:110px">Fabricante</th>
+      <th style="width:40px;text-align:center">Qtd</th>
+      <th style="width:70px;text-align:right">Ref. R$</th>
+    </tr></thead>
+    <tbody>${linhasSecao(s)}</tbody>
+  </table>
+</div>`).join('')}
+<div class="rodape">
+  <span>Impresso em ${hoje}</span>
+  <span>Total: ${totalPecas} itens / ${totalUnidades} unidades em estoque</span>
+</div>
+<script>window.onload=()=>window.print()<\/script>
+</body></html>`;
+
+  const w=window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+}
 
 /* ─── Init ────────────────────────────────────────────────────────────── */
 async function init(){
