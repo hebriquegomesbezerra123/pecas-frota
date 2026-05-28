@@ -114,7 +114,7 @@ app.put('/api/pecas/:id', (req, res) => {
   const catalog = loadCatalog();
   const idx = catalog.pecas.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Peça não encontrada' });
-  const allowed = ['quantidade','observacoes','pendente_analise','nome','descricao','codigo','fabricante','veiculos_compativeis'];
+  const allowed = ['quantidade','observacoes','pendente_analise','nome','descricao','codigo','fabricante','veiculos_compativeis','preco_referencia'];
   allowed.forEach(f => { if (req.body[f] !== undefined) catalog.pecas[idx][f] = req.body[f]; });
   saveCatalog(catalog);
   res.json({ success: true, peca: catalog.pecas[idx] });

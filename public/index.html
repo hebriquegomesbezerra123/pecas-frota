@@ -528,17 +528,24 @@
           </div>
         </div>
 
-        <!-- Preço ML -->
+        <!-- Preço Referência -->
         <div class="mt-3 pt-3 border-top">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <span class="fw-semibold small text-muted text-uppercase" style="letter-spacing:.06em">
-              <i class="bi bi-tags me-1" style="color:var(--brand-cyan)"></i>Preço de Mercado (ML)
+              <i class="bi bi-tags me-1" style="color:var(--brand-cyan)"></i>Preço Referência
             </span>
-            <button class="btn btn-sm btn-outline-secondary" id="btnBuscarPreco" onclick="buscarPreco()">
-              <i class="bi bi-search me-1"></i>Buscar
+            <a id="btnVerML" href="#" target="_blank" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-box-arrow-up-right me-1"></i>Buscar no ML
+            </a>
+          </div>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text">R$</span>
+            <input type="number" class="form-control" id="precoInput" min="0" step="0.01" placeholder="0,00">
+            <button class="btn btn-outline-primary" onclick="salvarPreco()">
+              <i class="bi bi-check2 me-1"></i>Salvar
             </button>
           </div>
-          <div id="precoResult" class="small text-muted">Clique em "Buscar" para consultar preços no Mercado Livre.</div>
+          <div id="precoSalvoInfo" class="small text-muted mt-1"></div>
         </div>
 
         <!-- Histórico -->
@@ -913,7 +920,7 @@ function openModal(id){
     });
   } else { main.style.display='none'; ph.style.display='flex'; }
 
-  document.getElementById('precoResult').innerHTML='Clique em "Buscar" para consultar preços no Mercado Livre.';
+  setupPrecoML(p);
   document.getElementById('historicoResult').innerHTML='<div class="text-muted small">Carregando...</div>';
   if(!modalBs) modalBs=new bootstrap.Modal(document.getElementById('modalPeca'));
   modalBs.show();
@@ -944,54 +951,29 @@ function uploadFotosExistente(input){
   input.value='';
 }
 
-/* ─── Preço ML (client-side — ML API tem CORS aberto para browsers) ──── */
-function buscarPreco(){
-  if(!currentId) return;
-  const p=allPecas.find(x=>x.id===currentId); if(!p) return;
-  const btn=document.getElementById('btnBuscarPreco'), res=document.getElementById('precoResult');
-  btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Buscando...';
-
-  // Busca só pelo nome + código (sem fabricante que pode confundir)
-  const termos=[p.nome, p.codigo].filter(Boolean).join(' ').substring(0,80);
-  const q=encodeURIComponent(termos);
-  fetch(`https://api.mercadolibre.com/sites/MLB/search?q=${q}&limit=10`)
-    .then(r=>r.json())
-    .then(data=>{
-      btn.disabled=false; btn.innerHTML='<i class="bi bi-search me-1"></i>Buscar';
-      const items=(data.results||[]).filter(i=>i.price>0).slice(0,10);
-      if(!items.length){
-        // tenta só com o nome
-        return fetch(`https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(p.nome)}&limit=10`)
-          .then(r=>r.json()).then(d2=>{
-            const it2=(d2.results||[]).filter(i=>i.price>0).slice(0,10);
-            if(!it2.length){res.innerHTML='<span class="text-muted small"><i class="bi bi-info-circle me-1"></i>Sem resultados encontrados no Mercado Livre.</span>';return;}
-            renderPrecos(it2,res);
-          });
-      }
-      renderPrecos(items,res);
-    })
-    .catch(()=>{
-      btn.disabled=false; btn.innerHTML='<i class="bi bi-search me-1"></i>Buscar';
-      res.innerHTML='<span class="text-danger small"><i class="bi bi-wifi-off me-1"></i>Erro ao consultar. Verifique a conexão.</span>';
-    });
+/* ─── Preço Referência ────────────────────────────────────────────────── */
+function setupPrecoML(p){
+  const termos=[p.nome, p.codigo, p.fabricante].filter(Boolean).join(' ').substring(0,100);
+  document.getElementById('btnVerML').href='https://lista.mercadolivre.com.br/'+encodeURIComponent(termos);
+  document.getElementById('precoInput').value=p.preco_referencia||'';
+  const info=document.getElementById('precoSalvoInfo');
+  if(p.preco_referencia){
+    info.innerHTML=`<i class="bi bi-check-circle text-success me-1"></i>Referência salva: <strong>${Number(p.preco_referencia).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</strong>`;
+  } else { info.textContent='Pesquise no ML e registre o preço de referência.'; }
 }
-
-function renderPrecos(items,res){
-  const prices=items.map(i=>i.price);
-  const avg=prices.reduce((s,p)=>s+p,0)/prices.length;
-  const fmt=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-  res.innerHTML=`
-    <div class="row g-2 mb-2">
-      <div class="col-4 text-center"><div class="fw-bold fs-5" style="color:var(--brand-navy)">${fmt(avg)}</div><div class="text-muted" style="font-size:.7rem">MÉDIA</div></div>
-      <div class="col-4 text-center"><div class="fw-bold fs-6 text-success">${fmt(Math.min(...prices))}</div><div class="text-muted" style="font-size:.7rem">MÍNIMO</div></div>
-      <div class="col-4 text-center"><div class="fw-bold fs-6 text-danger">${fmt(Math.max(...prices))}</div><div class="text-muted" style="font-size:.7rem">MÁXIMO</div></div>
-    </div>
-    <div class="text-muted mb-1" style="font-size:.72rem">${items.length} resultados analisados</div>
-    ${items.slice(0,3).map(e=>`
-      <div class="preco-exemplo d-flex justify-content-between align-items-start">
-        <a href="${e.permalink}" target="_blank" class="text-truncate me-2" style="max-width:270px;font-size:.78rem">${e.title.substring(0,70)}</a>
-        <span class="fw-semibold text-nowrap" style="color:var(--brand-navy)">${fmt(e.price)}</span>
-      </div>`).join('')}`;
+function salvarPreco(){
+  if(!currentId) return;
+  const val=parseFloat(document.getElementById('precoInput').value);
+  if(isNaN(val)||val<0){document.getElementById('precoInput').focus();return;}
+  fetch(`/api/pecas/${currentId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({preco_referencia:val})})
+    .then(r=>r.json()).then(d=>{
+      if(d.success){
+        const p=allPecas.find(x=>x.id===currentId); if(p) p.preco_referencia=val;
+        const info=document.getElementById('precoSalvoInfo');
+        info.innerHTML=`<i class="bi bi-check-circle text-success me-1"></i>Salvo: <strong>${val.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</strong>`;
+        showToast('Preço referência salvo!','success');
+      } else showToast(d.error||'Erro.','danger');
+    }).catch(()=>showToast('Erro ao salvar.','danger'));
 }
 
 /* ─── Histórico ───────────────────────────────────────────────────────── */
