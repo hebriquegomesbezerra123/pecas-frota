@@ -171,7 +171,7 @@
       <li>
         <a class="nav-link" id="navVeiculos" onclick="setView('veiculos')">
           <i class="bi bi-truck nav-icon"></i>
-          <span class="sidebar-text ms-2">Por Veículo</span>
+          <span class="sidebar-text ms-2">Por Modelo</span>
         </a>
       </li>
       <li>
@@ -431,9 +431,9 @@
         </div>
       </div>
 
-      <!-- ── POR VEÍCULO ── -->
+      <!-- ── POR MODELO ── -->
       <div id="viewVeiculos" style="display:none">
-        <h4 class="fw-bold mb-3"><i class="bi bi-truck me-2 text-primary"></i>Peças por Veículo</h4>
+        <h4 class="fw-bold mb-3"><i class="bi bi-truck me-2 text-primary"></i>Peças por Modelo</h4>
         <div id="veiculosList" class="row g-3"></div>
         <div id="veiculoPecas" style="display:none">
           <div class="d-flex align-items-center gap-2 mb-3">
@@ -815,8 +815,9 @@ function buildCard(p){
 function filterPecas(){
   const q=(document.getElementById('searchInput').value||'').toLowerCase();
   const sort=document.getElementById('sortSelect').value;
+  const filterPlates=vehicleFilter?allFrota.filter(v=>v.modelo===vehicleFilter).map(v=>v.placa.toUpperCase()):[];
   let list=allPecas.filter(p=>{
-    if(vehicleFilter&&!p.veiculos_compativeis.some(v=>v.includes(vehicleFilter.toUpperCase()))) return false;
+    if(vehicleFilter&&!p.veiculos_compativeis.some(vc=>filterPlates.some(pl=>vc.toUpperCase().includes(pl)))) return false;
     if(!q) return true;
     return p.nome.toLowerCase().includes(q)||p.descricao.toLowerCase().includes(q)||
            p.codigo.toLowerCase().includes(q)||p.fabricante.toLowerCase().includes(q);
@@ -829,12 +830,12 @@ function filterPecas(){
   document.getElementById('resultCount').textContent=`${list.length} peça${list.length!==1?'s':''}`;
 }
 
-/* ─── Vehicle filter ──────────────────────────────────────────────────── */
-function filterByVeiculo(placa){
-  vehicleFilter=placa;
+/* ─── Vehicle filter (por modelo) ────────────────────────────────────── */
+function filterByVeiculo(modelo){
+  vehicleFilter=modelo;
   document.getElementById('searchInput').value='';
   updateVehicleFilterUI();
-  document.querySelectorAll('#sidebarFrota .nav-link').forEach(el=>el.classList.toggle('active',el.dataset.placa===placa));
+  document.querySelectorAll('#sidebarFrota .nav-link').forEach(el=>el.classList.toggle('active',el.dataset.modelo===modelo));
   setView('todas');
 }
 function clearVehicleFilter(){
@@ -845,15 +846,14 @@ function clearVehicleFilter(){
 function updateVehicleFilterUI(){
   const badge=document.getElementById('vehicleFilterBadge'), text=document.getElementById('vehicleFilterText');
   if(vehicleFilter){
-    const v=allFrota.find(f=>f.placa.toUpperCase()===vehicleFilter.toUpperCase());
-    text.textContent=vehicleFilter+(v?' — '+v.modelo.split(' ').slice(0,2).join(' '):'');
+    text.textContent=vehicleFilter.replace('VW/','VW ');
     badge.style.removeProperty('display');
   } else { badge.style.setProperty('display','none','important'); }
 }
 
 /* ─── Views ───────────────────────────────────────────────────────────── */
 const VIEWS=['dashboard','todas','veiculos','pendentes','fora','movimentacoes'];
-const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Veículo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações'};
+const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações'};
 
 function setView(v){
   VIEWS.forEach(id=>{
@@ -873,28 +873,35 @@ function setView(v){
 
 function renderList(id,list){ const c=document.getElementById(id); c.innerHTML=''; list.forEach(p=>c.appendChild(buildCard(p))); }
 
-/* ─── Vehicle view ────────────────────────────────────────────────────── */
+/* ─── Model view ──────────────────────────────────────────────────────── */
 function renderVeiculos(){
   const list=document.getElementById('veiculosList'), det=document.getElementById('veiculoPecas');
   list.style.display=''; det.style.display='none'; list.innerHTML='';
-  allFrota.forEach(v=>{
-    const pecas=allPecas.filter(p=>p.veiculos_compativeis.some(vc=>vc.includes(v.placa.toUpperCase())));
+  // Agrupa por modelo
+  const modelos={};
+  allFrota.forEach(v=>{ if(!modelos[v.modelo]) modelos[v.modelo]=[]; modelos[v.modelo].push(v); });
+  Object.keys(modelos).sort().forEach(mod=>{
+    const veics=modelos[mod];
+    const plates=veics.map(v=>v.placa.toUpperCase());
+    const pecas=allPecas.filter(p=>p.veiculos_compativeis.some(vc=>plates.some(pl=>vc.toUpperCase().includes(pl))));
+    const label=mod.replace('VW/','VW ');
     const col=document.createElement('div'); col.className='col-12 col-md-6 col-xl-4';
-    col.innerHTML=`<div class="card shadow-sm vehicle-card h-100" onclick="showVeiculoPecas('${v.placa}')">
+    col.innerHTML=`<div class="card shadow-sm vehicle-card h-100" onclick="showVeiculoPecas('${mod.replace(/'/g,"\\'")}')">
       <div class="card-body"><div class="d-flex align-items-center gap-3">
         <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:46px;height:46px;background:#e8eaf0;color:var(--brand-navy)"><i class="bi bi-truck fs-4"></i></div>
-        <div class="flex-grow-1"><div class="fw-bold">${v.placa}</div><div class="text-muted small">${v.modelo}</div></div>
+        <div class="flex-grow-1"><div class="fw-bold">${label}</div><div class="text-muted small">${veics.length} veículo(s)</div></div>
         <span class="badge rounded-pill" style="background:var(--brand-navy);color:#fff">${pecas.length} peças</span>
       </div></div></div>`;
     list.appendChild(col);
   });
 }
-function showVeiculoPecas(placa){
-  const veiculo=allFrota.find(v=>v.placa.toUpperCase()===placa.toUpperCase());
-  const pecas=allPecas.filter(p=>p.veiculos_compativeis.some(v=>v.includes(placa.toUpperCase())));
+function showVeiculoPecas(modelo){
+  const plates=allFrota.filter(v=>v.modelo===modelo).map(v=>v.placa.toUpperCase());
+  const pecas=allPecas.filter(p=>p.veiculos_compativeis.some(vc=>plates.some(pl=>vc.toUpperCase().includes(pl))));
   document.getElementById('veiculosList').style.display='none';
   const det=document.getElementById('veiculoPecas'); det.style.display='';
-  document.getElementById('veiculoTitle').innerHTML=`<i class="bi bi-truck me-2 text-primary"></i>${veiculo?veiculo.modelo:placa} — ${placa} <span class="badge ms-2" style="background:var(--brand-navy);color:#fff">${pecas.length} peças</span>`;
+  const label=modelo.replace('VW/','VW ');
+  document.getElementById('veiculoTitle').innerHTML=`<i class="bi bi-truck me-2 text-primary"></i>${label} <span class="badge ms-2" style="background:var(--brand-navy);color:#fff">${pecas.length} peças</span>`;
   const grid=document.getElementById('veiculoPecasGrid'); grid.innerHTML='';
   pecas.forEach(p=>grid.appendChild(buildCard(p)));
 }
@@ -1088,8 +1095,8 @@ async function analisarComIA(){
     // Marca veículos sugeridos
     if(p.veiculos_sugeridos&&p.veiculos_sugeridos.length){
       document.querySelectorAll('#npVeiculosCheck input[type=checkbox]').forEach(cb=>{
-        const frotaEntry=allFrota.find(v=>v.placa===cb.value);
-        if(frotaEntry && p.veiculos_sugeridos.some(s=>frotaEntry.modelo.toLowerCase().includes(s.toLowerCase())||s.toLowerCase().includes(frotaEntry.modelo.toLowerCase())))
+        const mod=cb.value.toLowerCase();
+        if(p.veiculos_sugeridos.some(s=>mod.includes(s.toLowerCase())||s.toLowerCase().includes(mod)))
           cb.checked=true;
       });
     }
@@ -1141,9 +1148,13 @@ function openNovaPecaModal(){
   btnIA.disabled=false; btnIA.style.background='linear-gradient(135deg,#4f46e5,#7c3aed)';
   btnIA.innerHTML='<i class="bi bi-stars me-1"></i>Analisar com IA — preencher automaticamente';
   const wrap=document.getElementById('npVeiculosCheck'); wrap.innerHTML='';
-  allFrota.forEach(v=>{
+  const modMap={};
+  allFrota.forEach(v=>{ if(!modMap[v.modelo]) modMap[v.modelo]=[]; modMap[v.modelo].push(v); });
+  Object.keys(modMap).sort().forEach(mod=>{
+    const label=mod.replace('VW/','VW ');
+    const count=modMap[mod].length;
     const lbl=document.createElement('label'); lbl.className='d-flex align-items-center gap-1 small'; lbl.style.cursor='pointer';
-    lbl.innerHTML=`<input type="checkbox" class="form-check-input" value="${v.placa}" style="margin:0"> <span>${v.placa}</span>`;
+    lbl.innerHTML=`<input type="checkbox" class="form-check-input" value="${mod}" style="margin:0"> <span>${label}<span class="text-muted ms-1">(${count})</span></span>`;
     wrap.appendChild(lbl);
   });
   if(!modalNovaBs) modalNovaBs=new bootstrap.Modal(document.getElementById('modalNovaPeca'));
@@ -1153,8 +1164,9 @@ async function submitNovaPeca(){
   const nome=document.getElementById('npNome').value.trim(), cat=document.getElementById('npCategoria').value;
   if(!nome){document.getElementById('npNome').focus();return;}
   if(!cat){document.getElementById('npCategoria').focus();return;}
-  const veics=[...document.querySelectorAll('#npVeiculosCheck input:checked')].map(el=>{
-    const f=allFrota.find(v=>v.placa===el.value); return f?`${f.placa} ${f.modelo}`:el.value;
+  const veics=[];
+  [...document.querySelectorAll('#npVeiculosCheck input:checked')].forEach(el=>{
+    allFrota.filter(v=>v.modelo===el.value).forEach(v=>veics.push(`${v.placa} ${v.modelo}`));
   });
   const precoIa=parseFloat(document.getElementById('npFotoInput').dataset.precoIa||'0')||0;
   const payload={nome,codigo:document.getElementById('npCodigo').value.trim(),
@@ -1268,13 +1280,16 @@ function loadDashboard(){
 /* ─── Sidebar builders ────────────────────────────────────────────────── */
 function buildSidebarFrota(frota){
   const el=document.getElementById('sidebarFrota'); el.innerHTML='';
-  frota.forEach(v=>{
+  const modelos={};
+  frota.forEach(v=>{ if(!modelos[v.modelo]) modelos[v.modelo]=[]; modelos[v.modelo].push(v.placa); });
+  Object.keys(modelos).sort().forEach(mod=>{
     const li=document.createElement('li'); li.className='nav-item';
-    const modelo=v.modelo.replace('VW/','').split(' ').slice(0,2).join(' ');
-    li.innerHTML=`<a class="nav-link" data-placa="${v.placa}" onclick="filterByVeiculo('${v.placa}')">
+    const label=mod.replace('VW/','VW ');
+    const count=modelos[mod].length;
+    li.innerHTML=`<a class="nav-link" data-modelo="${mod}" onclick="filterByVeiculo('${mod.replace(/'/g,"\\'")}')">
       <i class="bi bi-truck nav-icon"></i>
-      <span class="sidebar-text ms-2" style="flex:1;overflow:hidden;text-overflow:ellipsis">${v.placa}</span>
-      <span class="badge ms-1 sidebar-text" style="background:rgba(255,255,255,.15);font-size:.6rem;flex-shrink:0">${modelo}</span>
+      <span class="sidebar-text ms-2" style="flex:1;overflow:hidden;text-overflow:ellipsis">${label}</span>
+      <span class="badge ms-1 sidebar-text" style="background:rgba(255,255,255,.15);font-size:.6rem;flex-shrink:0">${count}</span>
     </a>`;
     el.appendChild(li);
   });
