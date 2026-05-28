@@ -1,0 +1,4 @@
+node_modules/
+compress_fotos.js
+.claude/
+*.log

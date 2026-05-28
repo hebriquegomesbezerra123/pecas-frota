@@ -1,0 +1,1115 @@
+{
+  "frota": [
+    {
+      "placa": "TKM2F51",
+      "modelo": "VW/EXPRESS DRF",
+      "marca": "VW"
+    },
+    {
+      "placa": "TMI1D16",
+      "modelo": "RENAULT KANGOO",
+      "marca": "Renault"
+    },
+    {
+      "placa": "DPE6E47",
+      "modelo": "VW/EXPRESS DRC",
+      "marca": "VW"
+    },
+    {
+      "placa": "BRQ1E12",
+      "modelo": "MERCEDES ATEGO",
+      "marca": "Mercedes-Benz"
+    },
+    {
+      "placa": "BZG0A53",
+      "modelo": "MERCEDES ACCELO",
+      "marca": "Mercedes-Benz"
+    },
+    {
+      "placa": "EPE0D44",
+      "modelo": "VW/EXPRESS DRF",
+      "marca": "VW"
+    },
+    {
+      "placa": "FSG6D02",
+      "modelo": "VW/EXPRESS DRF",
+      "marca": "VW"
+    },
+    {
+      "placa": "GCT5A84",
+      "modelo": "FIAT FIORINO",
+      "marca": "Fiat"
+    },
+    {
+      "placa": "TLM4I49",
+      "modelo": "RENAULT KANGOO",
+      "marca": "Renault"
+    },
+    {
+      "placa": "STV3I95",
+      "modelo": "VW/EXPRESS DRF",
+      "marca": "VW"
+    },
+    {
+      "placa": "GDP6E92",
+      "modelo": "VW/EXPRESS DRC",
+      "marca": "VW"
+    },
+    {
+      "placa": "SSR6G57",
+      "modelo": "RENAULT KANGOO",
+      "marca": "Renault"
+    },
+    {
+      "placa": "BWV8G48",
+      "modelo": "MERCEDES ACCELO",
+      "marca": "Mercedes-Benz"
+    },
+    {
+      "placa": "TJR3H59",
+      "modelo": "VW/CRM",
+      "marca": "VW"
+    },
+    {
+      "placa": "ENK6D58",
+      "modelo": "VW/DELIVERY",
+      "marca": "VW"
+    },
+    {
+      "placa": "GCT1E27",
+      "modelo": "VOLVO FH",
+      "marca": "Volvo"
+    },
+    {
+      "placa": "UGP3B23",
+      "modelo": "MERCEDES ACCELO",
+      "marca": "Mercedes-Benz"
+    },
+    {
+      "placa": "UER6A47",
+      "modelo": "VW/EXPRESS DRF",
+      "marca": "VW"
+    },
+    {
+      "placa": "UFL5E84",
+      "modelo": "VW/DELIVERY",
+      "marca": "VW"
+    },
+    {
+      "placa": "OFICINA",
+      "modelo": "BOLSÃO OFICINA",
+      "marca": "Geral"
+    }
+  ],
+  "pecas": [
+    {
+      "id": "001",
+      "nome": "Filtro de Combustível",
+      "descricao": "Filtro de combustível diesel original Mercedes-Benz. Remove impurezas e água do combustível antes de chegar aos injetores, protegendo o sistema de injeção. Modelo compacto com sensor de água integrado.",
+      "codigo": "A 651 090 29 52",
+      "fabricante": "Mercedes-Benz (Mann WK...18)",
+      "categoria": "Filtros",
+      "quantidade": 3,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559559.jpg",
+        "1000559562.jpg",
+        "1000559593.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Escrito 'ATEGO/ACCELO' na caixa"
+    },
+    {
+      "id": "002",
+      "nome": "Filtro de Óleo do Motor",
+      "descricao": "Filtro de óleo lubrificante original Mercedes-Benz (elemento cartucho). Retém partículas metálicas e impurezas do óleo do motor, mantendo a lubrificação eficiente. Para motores OM651 (Atego/Accelo leves).",
+      "codigo": "A 651 180 01 09",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Filtros",
+      "quantidade": 2,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559561.jpg",
+        "1000559635.jpg",
+        "1000559634.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Escrito 'ATEGO/ACCELO' na caixa"
+    },
+    {
+      "id": "003",
+      "nome": "Filtro de Óleo do Motor (grande)",
+      "descricao": "Filtro de óleo lubrificante original Mercedes-Benz, elemento cilíndrico grande. Para motores OM906 (Atego/Accelo pesados). Troca a cada revisão de óleo.",
+      "codigo": "A 906 180 03 09",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Filtros",
+      "quantidade": 2,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559564.jpg",
+        "1000559583.jpg",
+        "1000559584.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Uma unidade identificada como 'BOLSÃO'"
+    },
+    {
+      "id": "004",
+      "nome": "Elemento Filtro de Combustível (grande)",
+      "descricao": "Kit elemento filtrante de combustível para pré-filtro grande (sedimentador). Filtra água e partículas grossas do diesel antes do filtro fino. Modelo para motores OM906.",
+      "codigo": "A 000 477 99 15",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559573.jpg",
+        "1000559574.jpg",
+        "1000559575.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Fotos 573 e 574 são dois ângulos da mesma caixa (1 unidade). Filtro grande cilíndrico bege."
+    },
+    {
+      "id": "005",
+      "nome": "Elemento Filtro de Combustível Accelo",
+      "descricao": "Elemento filtrante de combustível Mercedes-Benz para o Accelo. Remove impurezas do diesel, protegendo bomba e injetores. Troca periódica conforme manual.",
+      "codigo": "A 979 477 00 15",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559565.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Escrito 'ACCELO' na caixa"
+    },
+    {
+      "id": "006",
+      "nome": "Filtro de Ar do Motor MB",
+      "descricao": "Filtro de ar do motor Mercedes-Benz (Mann C4312/1). Retém poeira e partículas do ar antes de entrar no motor, evitando desgaste prematuro. Elemento plano com moldura laranja.",
+      "codigo": "A 000 090 37 51",
+      "fabricante": "Mercedes-Benz / Mann-Filter C4312/1",
+      "categoria": "Filtros",
+      "quantidade": 3,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559647.jpg",
+        "1000559648.jpg",
+        "1000559720.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "EST.01.34 anotado na etiqueta de uma unidade"
+    },
+    {
+      "id": "007",
+      "nome": "Filtro de Combustível Renault Kangoo",
+      "descricao": "Filtro de combustível original Renault Group. Filtra impurezas do diesel/gasolina protegendo o sistema de injeção. Modelo cilíndrico preto com bico laranja.",
+      "codigo": "8200386495",
+      "fabricante": "Renault Group",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "TMI1D16 - RENAULT KANGOO",
+        "TLM4I49 - RENAULT KANGOO",
+        "SSR6G57 - RENAULT KANGOO"
+      ],
+      "fotos": [
+        "1000559566.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Escrito 'KANGOO' na caixa"
+    },
+    {
+      "id": "008",
+      "nome": "Filtro de Óleo Renault",
+      "descricao": "Filtro de óleo lubrificante original Renault (rosca, tipo spin-on azul). Retém partículas metálicas e resíduos do óleo do motor. Made in France.",
+      "codigo": "7700274177",
+      "fabricante": "Renault Group",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "TMI1D16 - RENAULT KANGOO",
+        "TLM4I49 - RENAULT KANGOO",
+        "SSR6G57 - RENAULT KANGOO"
+      ],
+      "fotos": [
+        "1000559570.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": ""
+    },
+    {
+      "id": "009",
+      "nome": "Filtro de Ar Fiat Fiorino",
+      "descricao": "Filtro de ar do motor Fiat Fiorino, linha Classic Line Mopar. Bloco de papel filtrante retangular com moldura vermelha. Retém poeira e protege o motor.",
+      "codigo": "7091878 (LX3115)",
+      "fabricante": "Mopar / Fiat Classic Line",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "GCT5A84 - FIAT FIORINO"
+      ],
+      "fotos": [
+        "1000559558.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Escrito 'FIORINO' na caixa"
+    },
+    {
+      "id": "010",
+      "nome": "Filtro de Combustível Iveco Daily",
+      "descricao": "Filtro de combustível Japanparts FCBR48S para Iveco Daily. ATENÇÃO: veículo não consta na frota atual.",
+      "codigo": "FCBR48S",
+      "fabricante": "Japanparts",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559568.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "⚠️ Escrito 'IVECO DAILY' - veículo NÃO está na frota atual"
+    },
+    {
+      "id": "011",
+      "nome": "Filtro Secador de Ar Coalescente",
+      "descricao": "Filtro secador de ar coalescente Alliance Truck Parts para sistema de freios pneumáticos. Remove umidade e óleo do ar comprimido, protegendo válvulas e diafragmas do sistema pneumático. Rosca M39x1,5-6H.",
+      "codigo": "A00042957950097",
+      "fabricante": "Alliance Truck Parts (Mercedes-Benz)",
+      "categoria": "Filtros",
+      "quantidade": 2,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559640.jpg",
+        "1000559641.jpg",
+        "1000559642.jpg",
+        "1000559643.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "2 unidades identificadas (2 caixas + 2 filtros)"
+    },
+    {
+      "id": "012",
+      "nome": "Elemento Filtrante Bomba de Combustível",
+      "descricao": "Elemento filtrante da bomba de combustível Mercedes-Benz. Filtra o combustível no interior da bomba de alimentação, protegendo os injetores de alta pressão (Common Rail).",
+      "codigo": "A 000 142 10 89 28",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559659.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": ""
+    },
+    {
+      "id": "013",
+      "nome": "Filtro de Óleo Cilíndrico (grande amarelo)",
+      "descricao": "Filtro de óleo cilíndrico de grande porte, possivelmente para motor Volvo ou MB pesado. Elemento cartucho amarelo sem carcaça metálica.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "GCT1E27 - VOLVO FH"
+      ],
+      "fotos": [
+        "1000559660.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código não visível nas fotos. Verificar físicamente."
+    },
+    {
+      "id": "014",
+      "nome": "Filtro de Óleo Cilíndrico (pequeno amarelo)",
+      "descricao": "Filtro de óleo tipo cartucho cilíndrico pequeno, amarelo. Usado em motores Mercedes-Benz. Dois exemplares fotografados separadamente.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Filtros",
+      "quantidade": 2,
+      "veiculos_compativeis": [
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559721.jpg",
+        "1000559722.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Dois exemplares fotografados separadamente - confirmar código"
+    },
+    {
+      "id": "015",
+      "nome": "Filtro de Óleo Mahle",
+      "descricao": "Filtro de óleo Mahle OC 26x (tipo spin-on, preto). Remove impurezas do óleo lubrificante do motor.",
+      "codigo": "OC 26...",
+      "fabricante": "Mahle",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559644.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código parcialmente visível. Verificar aplicação exata."
+    },
+    {
+      "id": "016",
+      "nome": "Kit Filtro com Carcaça (separador água/combustível)",
+      "descricao": "Kit completo de filtro separador água/combustível composto de carcaça rosqueável preta e elemento filtrante branco. Separa água do diesel, prevenindo corrosão e danos à bomba injetora.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559651.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código não visível. Verificar físicamente."
+    },
+    {
+      "id": "017",
+      "nome": "Filtro Tela/Malha Metálica (hidráulico)",
+      "descricao": "Filtro de tela metálica de malha fina para sistema hidráulico ou caixa de câmbio. Remove partículas metálicas do fluido, protegendo bomba hidráulica e válvulas.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559658.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código não visível. Aparece junto com um adaptador preto."
+    },
+    {
+      "id": "018",
+      "nome": "Filtro de Óleo Toyota (fora da frota)",
+      "descricao": "Filtro de óleo lubrificante para Toyota Corolla, Paseo 1.5 16V, Camry 6 cil. Nº orig. 9091503002. ATENÇÃO: Toyota não está na frota.",
+      "codigo": "9091503002",
+      "fabricante": "Não identificado (filtro de reposição)",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559662.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "⚠️ Toyota NÃO está na frota. Verificar se é peça extraviada."
+    },
+    {
+      "id": "019",
+      "nome": "Filtro de Óleo Inpeca",
+      "descricao": "Filtro de óleo lubrificante da marca Inpeca (The Champion Filter). Produto nacional. Aplicação a confirmar.",
+      "codigo": "Não visível",
+      "fabricante": "Filtros Inpeca",
+      "categoria": "Filtros",
+      "quantidade": 1,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559663.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código não visível na foto. Verificar aplicação."
+    },
+    {
+      "id": "020",
+      "nome": "Pastilha de Freio VW Express",
+      "descricao": "Jogo de pastilhas de freio originais VW/MAN Latin America (Economy Line), referência JZV-698-151-A. Para freios a disco. Fabricadas pela TMD Friction. Fab: Jan/2026.",
+      "codigo": "JZV-698-151-A",
+      "fabricante": "VW/MAN Latin America (Economy) - TMD Friction",
+      "categoria": "Freios",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "TKM2F51 - VW/EXPRESS DRF",
+        "DPE6E47 - VW/EXPRESS DRC",
+        "EPE0D44 - VW/EXPRESS DRF",
+        "FSG6D02 - VW/EXPRESS DRF",
+        "STV3I95 - VW/EXPRESS DRF",
+        "GDP6E92 - VW/EXPRESS DRC",
+        "UER6A47 - VW/EXPRESS DRF"
+      ],
+      "fotos": [
+        "1000559576.jpg",
+        "1000559577.jpg",
+        "1000559646.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Conjunto com 2 pastilhas frontais"
+    },
+    {
+      "id": "021",
+      "nome": "Pastilha de Freio Renault",
+      "descricao": "Jogo de pastilhas de freio dianteiras originais Renault, referência 41 0A 125 82R (F195 01 HH). Compatível com modelos Captur, Duster, Fluence, Lodgy, Mégane 3, Sandero RS. Inclui sensor de desgaste. Fab: 10/2025.",
+      "codigo": "41 0A 125 82R / F195(01)HH",
+      "fabricante": "Renault Original",
+      "categoria": "Freios",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "TMI1D16 - RENAULT KANGOO",
+        "TLM4I49 - RENAULT KANGOO",
+        "SSR6G57 - RENAULT KANGOO"
+      ],
+      "fotos": [
+        "1000559585.jpg",
+        "1000559586.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Aplicação caixa: Captur, Duster, Fluence, Lodgy, Mégane 3, Sandero RS"
+    },
+    {
+      "id": "022",
+      "nome": "Pastilha de Freio Tecpads",
+      "descricao": "Jogo de pastilhas de freio da marca Tecpads (Fastilhas e Lonas para Freios). Produto nacional. Veículo compatível a confirmar.",
+      "codigo": "Não identificado",
+      "fabricante": "Tecpads",
+      "categoria": "Freios",
+      "quantidade": 1,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559567.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código não visível. Verificar aplicação físicamente."
+    },
+    {
+      "id": "023",
+      "nome": "Pastilha de Freio Alliance (caminhão)",
+      "descricao": "Jogo de pastilhas de freio para caminhão Mercedes-Benz, marca Alliance Truck Parts. Para freios a disco de eixo dianteiro. Alta resistência térmica.",
+      "codigo": "A70042103000097",
+      "fabricante": "Alliance Truck Parts",
+      "categoria": "Freios",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559656.jpg",
+        "1000559657.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "1 jogo de pastilhas grandes para caminhão"
+    },
+    {
+      "id": "024",
+      "nome": "Pastilha de Freio (grande caminhão)",
+      "descricao": "Jogo de pastilhas de freio grandes para caminhão pesado. Dois pares visíveis na foto. Código a confirmar.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Freios",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO"
+      ],
+      "fotos": [
+        "1000559645.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código não visível na foto."
+    },
+    {
+      "id": "025",
+      "nome": "Pastilha de Freio (cód. 5427 1423)",
+      "descricao": "Conjunto de pastilhas de freio, múltiplas peças por jogo. Código 5427 1423 gravado na sapata metálica.",
+      "codigo": "5427 1423",
+      "fabricante": "Não identificado",
+      "categoria": "Freios",
+      "quantidade": 1,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559661.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Veículo compatível a confirmar."
+    },
+    {
+      "id": "026",
+      "nome": "Sapata de Freio Mercedes-Benz (kit completo)",
+      "descricao": "Jogo de sapatas de freio a tambor Mercedes-Benz, código A 910 420 26 00. Inclui kit de molas, pinos e ajustadores. Para eixo traseiro. Sapata tipo arco com forro colado.",
+      "codigo": "A 910 420 26 00 / A90642003200028",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Freios",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO"
+      ],
+      "fotos": [
+        "1000559638.jpg",
+        "1000559639.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Jogo completo com kit de fixação"
+    },
+    {
+      "id": "027",
+      "nome": "Lona de Freio (arco)",
+      "descricao": "Lona/revestimento de freio a tambor em formato de arco. Material de atrito de alta resistência. Para reposição em sapatas de freio de caminhão.",
+      "codigo": "Não identificado",
+      "fabricante": "Havel (provável)",
+      "categoria": "Freios",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559650.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código parcialmente legível."
+    },
+    {
+      "id": "028",
+      "nome": "Tensor da Correia Acessórios MB (OM651)",
+      "descricao": "Tensor automático da correia de acessórios Mercedes-Benz para motor OM651 (Atego/Accelo leves). Mantém a tensão correta da correia que aciona alternador, compressor de ar e bomba d'água, evitando patinagem e desgaste prematuro.",
+      "codigo": "A 651 200 18 70",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Motor",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559572.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": ""
+    },
+    {
+      "id": "029",
+      "nome": "Tensor da Correia Acessórios MB (OM906)",
+      "descricao": "Tensor automático da correia de acessórios Mercedes-Benz para motor OM906 (Atego/Accelo pesados). Mantém a tensão correta evitando quebra e folgas na correia de transmissão auxiliar.",
+      "codigo": "A 906 200 67 70",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Motor",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559652.jpg",
+        "1000559653.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": ""
+    },
+    {
+      "id": "030",
+      "nome": "Rolamento do Motor VW",
+      "descricao": "Rolamento do motor (engine bearing) VW Caminhões e Ônibus, fabricado na Itália. Código 23C 105 276. Suporta e guia partes rotativas do motor, reduzindo atrito.",
+      "codigo": "23C 105 276 / 504114133",
+      "fabricante": "VW Caminhões e Ônibus",
+      "categoria": "Motor",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "TKM2F51 - VW/EXPRESS DRF",
+        "DPE6E47 - VW/EXPRESS DRC",
+        "EPE0D44 - VW/EXPRESS DRF",
+        "FSG6D02 - VW/EXPRESS DRF",
+        "STV3I95 - VW/EXPRESS DRF",
+        "GDP6E92 - VW/EXPRESS DRC",
+        "TJR3H59 - VW/CRM",
+        "ENK6D58 - VW/DELIVERY",
+        "UER6A47 - VW/EXPRESS DRF",
+        "UFL5E84 - VW/DELIVERY"
+      ],
+      "fotos": [
+        "1000559560.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Made in Italy"
+    },
+    {
+      "id": "031",
+      "nome": "Termostato Renault Kangoo",
+      "descricao": "Termostato original Renault Group para Kangoo. Regula a temperatura do motor abrindo e fechando a passagem de refrigerante para o radiador. Garante aquecimento rápido e temperatura ideal de operação.",
+      "codigo": "8200772985",
+      "fabricante": "Renault Group (Groupe Renault)",
+      "categoria": "Motor",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "TMI1D16 - RENAULT KANGOO",
+        "TLM4I49 - RENAULT KANGOO",
+        "SSR6G57 - RENAULT KANGOO"
+      ],
+      "fotos": [
+        "1000559569.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Escrito 'KANGOO' na caixa"
+    },
+    {
+      "id": "032",
+      "nome": "Injetor Common Rail MB",
+      "descricao": "Injetor de combustível Common Rail original Mercedes-Benz para motor OM651. Injeta combustível com alta pressão na câmara de combustão de forma precisa e atomizada. Componente crítico do sistema de injeção eletrônica.",
+      "codigo": "A 651 070 30 87 800001",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Motor",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559718.jpg",
+        "1000559719.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Produto genuíno MB Cars & Vans Brasil"
+    },
+    {
+      "id": "033",
+      "nome": "Acoplamento Mecânico MB",
+      "descricao": "Acoplamento mecânico original Mercedes-Benz Cars & Vans, código A 023 250 02 01. Transmite torque entre componentes do trem de força ou acessórios do motor.",
+      "codigo": "A 023 250 02 01",
+      "fabricante": "Mercedes-Benz Cars & Vans",
+      "categoria": "Motor",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559717.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": ""
+    },
+    {
+      "id": "034",
+      "nome": "Tampa do Filtro de Óleo MB",
+      "descricao": "Tampa/cabeçote do filtro de óleo Mercedes-Benz. Peça de alumínio circular com porca central sextavada e dois parafusos de fixação. Fecha o alojamento do elemento filtrante.",
+      "codigo": "103 539 02 09 00...",
+      "fabricante": "Mercedes-Benz",
+      "categoria": "Motor",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559649.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código parcialmente legível na foto."
+    },
+    {
+      "id": "035",
+      "nome": "Motor de Arranque",
+      "descricao": "Motor de arranque (starter motor) usado/recondicionado. Motor elétrico que aciona a engrenagem de partida do motor a combustão. Peça grande em alumínio com solenóide.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Motor",
+      "quantidade": 1,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559712.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código não visível. Peça aparenta ser usada/recondicionada."
+    },
+    {
+      "id": "036",
+      "nome": "Embreagem - Plato/Disco Pressionador",
+      "descricao": "Plato de pressão (disco pressionador) da embreagem. Comprime o disco de embreagem contra o volante do motor transmitindo o torque. Peça de grande porte com molas diafragma.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Embreagem",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559716.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código não legível na foto. Verificar físicamente."
+    },
+    {
+      "id": "037",
+      "nome": "Cilindro Mestre de Embreagem",
+      "descricao": "Cilindro mestre de embreagem FTE (marca Valeo) para Mercedes-Benz Sprinter (311/313/413) e Accelo 715C OM612LA. Gera pressão hidráulica no acionamento da embreagem ao pressionar o pedal.",
+      "codigo": "2109819 / KC130117.4.1",
+      "fabricante": "FTE Automotive (Valeo brand)",
+      "categoria": "Embreagem",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559636.jpg",
+        "1000559637.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Aplicação: Sprinter 311/313/413 e Accelo 715C OM612LA"
+    },
+    {
+      "id": "038",
+      "nome": "Atuador Hidráulico de Embreagem (Concêntrico)",
+      "descricao": "Atuador hidráulico concêntrico de embreagem FTE (rolamento de embreagem hidráulico). Substitui o garfo, rolamento de embreagem e cilindro escravo. Para MB Sprinter 311/313/413 e Accelo 715C OM612LA.",
+      "codigo": "1100936 / ZA3608.3.2-P",
+      "fabricante": "FTE Automotive (Valeo brand)",
+      "categoria": "Embreagem",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559654.jpg",
+        "1000559655.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Aplicação: Sprinter 311/313/413 e Accelo 715C OM612LA"
+    },
+    {
+      "id": "039",
+      "nome": "Coxim/Suporte do Motor VW",
+      "descricao": "Coxim (calço) do motor VW fabricado pela Axios. Elemento borracha-metal circular com 3 raios que absorve vibrações do motor, reduzindo ruído e protegendo a estrutura do veículo.",
+      "codigo": "23B... / AX109",
+      "fabricante": "Axios (VW)",
+      "categoria": "Suspensão e Fixação",
+      "quantidade": 2,
+      "veiculos_compativeis": [
+        "TKM2F51 - VW/EXPRESS DRF",
+        "DPE6E47 - VW/EXPRESS DRC",
+        "EPE0D44 - VW/EXPRESS DRF",
+        "FSG6D02 - VW/EXPRESS DRF",
+        "STV3I95 - VW/EXPRESS DRF",
+        "GDP6E92 - VW/EXPRESS DRC",
+        "TJR3H59 - VW/CRM",
+        "ENK6D58 - VW/DELIVERY",
+        "UER6A47 - VW/EXPRESS DRF",
+        "UFL5E84 - VW/DELIVERY"
+      ],
+      "fotos": [
+        "1000559588.jpg",
+        "1000559671.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "2 unidades identificadas em fotos separadas"
+    },
+    {
+      "id": "040",
+      "nome": "Bucha/Coxim VW DIBRACAM",
+      "descricao": "Bucha de borracha VW fabricada pela DIBRACAM Caminhões. Elemento amortecedor que une peças metálicas reduzindo vibração e ruído. Modelo cilíndrico com buchas concêntricas.",
+      "codigo": "23B 899...97",
+      "fabricante": "DIBRACAM Caminhões",
+      "categoria": "Suspensão e Fixação",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "TKM2F51 - VW/EXPRESS DRF",
+        "DPE6E47 - VW/EXPRESS DRC",
+        "EPE0D44 - VW/EXPRESS DRF",
+        "FSG6D02 - VW/EXPRESS DRF"
+      ],
+      "fotos": [
+        "1000559589.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Código parcialmente legível"
+    },
+    {
+      "id": "041",
+      "nome": "Buchas de Borracha (par)",
+      "descricao": "Par de buchas de borracha para suspensão ou fixação. Código 3906 gravado. Reduzem vibrações e ruídos em pontos de articulação da suspensão ou cabine.",
+      "codigo": "3906",
+      "fabricante": "Não identificado",
+      "categoria": "Suspensão e Fixação",
+      "quantidade": 2,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559715.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Veículo compatível a confirmar."
+    },
+    {
+      "id": "042",
+      "nome": "Bucha/Casquilho Metálico",
+      "descricao": "Bucha/casquilho cilíndrico em aço, com ranhura central (possivelmente para vedação). Pode ser bucha de mancal de câmbio, eixo ou pino de articulação.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Suspensão e Fixação",
+      "quantidade": 1,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559664.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Aplicação a confirmar."
+    },
+    {
+      "id": "043",
+      "nome": "Rolamento de Roda VW Delivery",
+      "descricao": "Rolamento de roda SKF VKHB 4109 para VW Delivery. Suporta o peso do veículo e permite a rotação livre das rodas com mínimo atrito. Made in Brazil.",
+      "codigo": "VKHB 4109",
+      "fabricante": "SKF",
+      "categoria": "Suspensão e Fixação",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "ENK6D58 - VW/DELIVERY",
+        "UFL5E84 - VW/DELIVERY"
+      ],
+      "fotos": [
+        "1000559670.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "VW Delivery escrito na caixa"
+    },
+    {
+      "id": "044",
+      "nome": "Molas a Gás / Pistões de Gás (par)",
+      "descricao": "Par de pistões/molas a gás (gas springs) para sustentação de tampa ou porta. Atuadores de haste cromada que mantêm abertas tampas do motor, capô ou portas de carga sem necessidade de suporte manual.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Carroceria",
+      "quantidade": 2,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559672.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Aplicação exata a confirmar. 2 unidades + 1 anel O-ring."
+    },
+    {
+      "id": "045",
+      "nome": "Acionamento Interno da Fechadura de Porta MB",
+      "descricao": "Acionamento interno direito da fechadura de porta Mercedes-Benz (cabo/manete interno). Aciona a trava da porta por dentro da cabine quando puxado.",
+      "codigo": "A 979 760 71 61 7860",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Carroceria",
+      "quantidade": 2,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559557.jpg",
+        "1000559633.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Escrito 'ATEGO/ACCELO' na caixa"
+    },
+    {
+      "id": "046",
+      "nome": "Maçaneta Interna de Porta VW",
+      "descricao": "Maçaneta interna de porta para veículos VW. Peça plástica preta usada no interior da porta para abertura. Uma unidade com cilindro de chave e outra sem.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Carroceria",
+      "quantidade": 2,
+      "veiculos_compativeis": [
+        "TKM2F51 - VW/EXPRESS DRF",
+        "DPE6E47 - VW/EXPRESS DRC",
+        "EPE0D44 - VW/EXPRESS DRF",
+        "FSG6D02 - VW/EXPRESS DRF",
+        "STV3I95 - VW/EXPRESS DRF",
+        "GDP6E92 - VW/EXPRESS DRC"
+      ],
+      "fotos": [
+        "1000559580.jpg",
+        "1000559632.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código não visível. 2 modelos diferentes fotografados."
+    },
+    {
+      "id": "047",
+      "nome": "Maçaneta Externa de Porta MB Accelo",
+      "descricao": "Maçaneta externa direita da porta MB Accelo com cilindro de chave. Peça original F.Confuorto, usada para abertura externa da porta da cabine.",
+      "codigo": "051.1.D.2/A74.2.C (176851)",
+      "fabricante": "F.Confuorto",
+      "categoria": "Carroceria",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559582.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Maçaneta externa porta DIR MB Accelo c/ch"
+    },
+    {
+      "id": "048",
+      "nome": "Maçaneta de Porta Ford Cargo (fora da frota)",
+      "descricao": "Maçaneta direita porta Ford Cargo DIR. ATENÇÃO: Ford Cargo não está na frota atual.",
+      "codigo": "12031-BE1 / P2031-5000",
+      "fabricante": "Não identificado",
+      "categoria": "Carroceria",
+      "quantidade": 1,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559713.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "⚠️ Ford Cargo NÃO está na frota. Verificar se é peça extraviada."
+    },
+    {
+      "id": "049",
+      "nome": "Maçaneta Externa de Porta (preta)",
+      "descricao": "Maçaneta externa de porta metálica pintada de preto, com dois pontos de fixação. Modelo para caminhão ou van.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Carroceria",
+      "quantidade": 1,
+      "veiculos_compativeis": [],
+      "fotos": [
+        "1000559714.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Aplicação a confirmar."
+    },
+    {
+      "id": "050",
+      "nome": "Painel de Controle de Climatização VW",
+      "descricao": "Painel/módulo de controle do ar condicionado e aquecimento VW (3 knobs: distribuição de ar, temperatura e velocidade do ventilador). Botão A/C incluso. Refere. 23B-819-045-C (Regulagem).",
+      "codigo": "23B-819-045-C",
+      "fabricante": "VW/MAN Latin America",
+      "categoria": "Elétrica e Eletrônica",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "TKM2F51 - VW/EXPRESS DRF",
+        "DPE6E47 - VW/EXPRESS DRC",
+        "EPE0D44 - VW/EXPRESS DRF",
+        "FSG6D02 - VW/EXPRESS DRF",
+        "STV3I95 - VW/EXPRESS DRF",
+        "GDP6E92 - VW/EXPRESS DRC",
+        "TJR3H59 - VW/CRM"
+      ],
+      "fotos": [
+        "1000559578.jpg",
+        "1000559579.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Prefixo 23B = VW Crafter/Express"
+    },
+    {
+      "id": "051",
+      "nome": "Chave de Luz e Limpador de Para-brisa (combinada)",
+      "descricao": "Módulo de chave combinada de coluna de direção para controle de luz e limpador de para-brisa. Alavancas dos dois lados com símbolos de luz e limpador. Aparenta ser para Fiat.",
+      "codigo": "Não identificado",
+      "fabricante": "Não identificado",
+      "categoria": "Elétrica e Eletrônica",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "GCT5A84 - FIAT FIORINO"
+      ],
+      "fotos": [
+        "1000559590.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Logo de estrela visível (Fiat?). Código não visível."
+    },
+    {
+      "id": "052",
+      "nome": "Chave de Pendural MB (Steering Column Switch)",
+      "descricao": "Interruptor combinado de coluna de direção (chave de pendural) original Mercedes-Benz. Controla luz, pisca e limpador de para-brisa. Peça importada.",
+      "codigo": "A 990 540 00 45",
+      "fabricante": "Mercedes-Benz Original",
+      "categoria": "Elétrica e Eletrônica",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559591.jpg"
+      ],
+      "pendente_analise": false,
+      "observacoes": "Produto importado"
+    },
+    {
+      "id": "053",
+      "nome": "Lanterna Lateral de Posição LED (laranja)",
+      "descricao": "Lanterna lateral de posição (pisca lateral) LED cor âmbar/laranja. Usada nas laterais de caminhões e vans para sinalização e identificação. Com fio de conexão.",
+      "codigo": "Não identificado",
+      "fabricante": "GP (provável)",
+      "categoria": "Elétrica e Eletrônica",
+      "quantidade": 1,
+      "veiculos_compativeis": [
+        "BRQ1E12 - MERCEDES ATEGO",
+        "BZG0A53 - MERCEDES ACCELO",
+        "BWV8G48 - MERCEDES ACCELO",
+        "UGP3B23 - MERCEDES ACCELO"
+      ],
+      "fotos": [
+        "1000559592.jpg"
+      ],
+      "pendente_analise": true,
+      "observacoes": "⚠️ Código não visível. Aplicação genérica para caminhões."
+    }
+  ]
+}

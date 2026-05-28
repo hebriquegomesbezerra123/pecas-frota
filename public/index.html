@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Peças — Frota</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    /* ─── Brand Colors ───────────────────────────────────────────────────────── */
+    :root {
+      --brand-navy:        #1B2B6E;
+      --brand-orange:      #F5941D;
+      --brand-cyan:        #00BFDF;
+      --brand-navy-dark:   #141F52;
+      --brand-orange-dark: #D97E0F;
+      --sidebar-bg:        #1B2B6E;
+    }
+
+    /* ─── Bootstrap overrides ─────────────────────────────────────────────── */
+    .btn-primary { background-color: var(--brand-navy); border-color: var(--brand-navy); }
+    .btn-primary:hover, .btn-primary:focus { background-color: var(--brand-navy-dark); border-color: var(--brand-navy-dark); }
+    .btn-outline-primary { color: var(--brand-navy); border-color: var(--brand-navy); }
+    .btn-outline-primary:hover { background-color: var(--brand-navy); border-color: var(--brand-navy); }
+    a { color: var(--brand-navy); }
+    a:hover { color: var(--brand-navy-dark); }
+    .text-primary { color: var(--brand-navy) !important; }
+    .bg-primary   { background-color: var(--brand-navy) !important; }
+    .border-primary { border-color: var(--brand-navy) !important; }
+    .badge.bg-primary { background-color: var(--brand-navy) !important; }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--brand-cyan);
+      box-shadow: 0 0 0 0.2rem rgba(0,191,223,0.25);
+    }
+
+    /* ─── Layout ──────────────────────────────────────────────────────────── */
+    body {
+      background-color: #f0f2f7;
+      font-family: 'Nunito', 'Segoe UI', sans-serif;
+      font-weight: 400;
+      color: #3a3f5c;
+      letter-spacing: 0.01em;
+    }
+    h1,h2,h3,h4,h5,h6 { font-family: 'Nunito', sans-serif; font-weight: 500; }
+    .fw-bold    { font-weight: 600 !important; }
+    .fw-semibold { font-weight: 500 !important; }
+    .table { font-size: 0.88rem; }
+    .btn { font-family: 'Nunito', sans-serif; font-weight: 500; letter-spacing: 0.02em; }
+    label, .form-label { font-weight: 500; }
+    .badge { font-weight: 500; letter-spacing: 0.03em; }
+    #app-wrapper { min-height: 100vh; }
+
+    /* ─── Sidebar ─────────────────────────────────────────────────────────── */
+    #sidebar {
+      width: 260px;
+      min-height: 100vh;
+      background-color: var(--sidebar-bg) !important;
+      transition: width 0.25s ease;
+      overflow: hidden;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    #sidebar::-webkit-scrollbar { width: 4px; }
+    #sidebar::-webkit-scrollbar-track { background: transparent; }
+    #sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+    #sidebar.collapsed { width: 64px; }
+    #sidebar.collapsed .sidebar-text { display: none !important; }
+    #sidebar.collapsed .sidebar-logo-img  { display: none !important; }
+    #sidebar.collapsed .sidebar-logo-icon { display: flex !important; }
+    #sidebar.collapsed .section-header { justify-content: center; padding: 6px 0; }
+    #sidebar.collapsed .section-header .section-title { display: none; }
+    #sidebar.collapsed .section-header .section-chevron { display: none; }
+    #sidebar.collapsed .sidebar-collapse { display: none !important; }
+
+    #sidebar .nav-link {
+      border-radius: 6px;
+      padding: 8px 12px;
+      transition: background 0.15s;
+      color: rgba(255,255,255,0.75) !important;
+      font-size: 0.9rem;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    #sidebar .nav-link .sidebar-text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #sidebar .nav-link:hover  { background-color: rgba(255,255,255,0.12); color: #fff !important; }
+    #sidebar .nav-link.active { background-color: var(--brand-orange); color: #fff !important; font-weight: 600; }
+    #sidebar .nav-link i.nav-icon { width: 20px; text-align: center; flex-shrink: 0; }
+
+    .sidebar-brand {
+      min-height: 72px;
+      background-color: #fff;
+      border-bottom: 3px solid var(--brand-orange) !important;
+      flex-shrink: 0;
+    }
+    .sidebar-logo-img { max-height: 52px; width: auto; object-fit: contain; }
+    .sidebar-logo-icon {
+      display: none;
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background-color: var(--brand-orange);
+      align-items: center; justify-content: center;
+      color: #fff; font-size: 1.1rem;
+    }
+    .sidebar-footer { flex-shrink: 0; background-color: var(--brand-navy-dark); }
+
+    /* Section headers with chevron */
+    .section-header {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px 4px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .section-header:hover { background: rgba(255,255,255,0.05); border-radius: 6px; }
+    .section-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--brand-cyan);
+      opacity: 0.85;
+      flex: 1;
+    }
+    .section-chevron {
+      color: rgba(255,255,255,0.4);
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .section-chevron.open { transform: rotate(180deg); }
+    .sidebar-collapse { overflow: hidden; transition: max-height 0.25s ease; }
+    .sidebar-collapse.closed { max-height: 0 !important; }
+
+    /* ─── Content ─────────────────────────────────────────────────────────── */
+    #content-wrapper { min-width: 0; }
+    .topbar {
+      min-height: 52px;
+      position: sticky; top: 0; z-index: 100;
+      border-bottom: 2px solid var(--brand-orange) !important;
+    }
+
+    /* ─── KPI Cards ───────────────────────────────────────────────────────── */
+    .kpi-card { border-left: 5px solid; border-radius: 8px; transition: transform 0.15s; }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-card.kpi-primary { border-left-color: var(--brand-navy); }
+    .kpi-card.kpi-warning { border-left-color: var(--brand-orange); }
+    .kpi-card.kpi-danger  { border-left-color: #dc3545; }
+    .kpi-card.kpi-info    { border-left-color: var(--brand-cyan); }
+    .kpi-value { font-size: 1.9rem; font-weight: 600; line-height: 1; color: var(--brand-navy); }
+    .kpi-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: #8a92b2; font-weight: 400; }
+
+    /* ─── Cards ───────────────────────────────────────────────────────────── */
+    .card { border: none; border-radius: 10px; }
+    .card-header {
+      background-color: #f8f9fb;
+      border-bottom: 1px solid #e8eaf0;
+      border-radius: 10px 10px 0 0 !important;
+    }
+
+    /* ─── Parts grid ──────────────────────────────────────────────────────── */
+    .peca-card {
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      border-radius: 10px !important;
+    }
+    .peca-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(27,43,110,0.15) !important; }
+    .peca-thumb {
+      width: 100%; height: 170px;
+      object-fit: cover;
+      border-radius: 10px 10px 0 0;
+      background: #e8eaf0;
+    }
+    .peca-thumb-placeholder {
+      width: 100%; height: 170px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; color: #b0b8d0;
+      background: #e8eaf0;
+      border-radius: 10px 10px 0 0;
+    }
+    .cat-badge {
+      font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+
+    /* ─── Tables ──────────────────────────────────────────────────────────── */
+    .table thead.table-dark th {
+      background-color: var(--brand-navy) !important;
+      border-color: var(--brand-navy-dark) !important;
+      font-weight: 500; font-size: 0.78rem;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .table-hover tbody tr:hover td { background-color: rgba(0,191,223,0.06); }
+
+    /* ─── Mobile ──────────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      #sidebar {
+        position: fixed; z-index: 1050;
+        transform: translateX(-100%);
+        width: 260px;
+        transition: transform 0.25s ease;
+      }
+      #sidebar.mobile-open { transform: translateX(0); }
+      #sidebar-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.5); z-index: 1040;
+      }
+      #sidebar-overlay.active { display: block; }
+    }
+
+    /* ─── Collapse arrow ──────────────────────────────────────────────────── */
+    .collapse-toggle::after {
+      content: '\F282'; font-family: 'bootstrap-icons';
+      float: right; transition: transform 0.2s;
+    }
+    .collapse-toggle.collapsed::after { transform: rotate(-90deg); }
+
+    /* ─── Vehicle cards ───────────────────────────────────────────────────── */
+    .vehicle-card {
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      border-left: 4px solid var(--brand-orange);
+    }
+    .vehicle-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(27,43,110,0.12) !important; }
+
+    /* ─── Toast ───────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      min-width: 220px;
+    }
+
+    /* ─── Modal gallery ───────────────────────────────────────────────────── */
+    .thumb-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .thumb-strip img {
+      width: 56px; height: 42px; object-fit: cover;
+      border-radius: 4px; cursor: pointer;
+      border: 2px solid transparent; transition: border-color 0.15s;
+    }
+    .thumb-strip img.active { border-color: var(--brand-orange); }
+    .main-photo { width: 100%; max-height: 320px; object-fit: contain; border-radius: 8px; background: #f0f2f7; }
+    .qty-control { display: flex; align-items: center; gap: 10px; }
+    .qty-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2px solid var(--brand-navy); background: transparent;
+      color: var(--brand-navy); font-size: 1.2rem; font-weight: 700;
+      cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+    }
+    .qty-btn:hover { background: var(--brand-navy); color: #fff; }
+    .qty-display { font-size: 1.6rem; font-weight: 700; min-width: 40px; text-align: center; color: var(--brand-navy); }
+
+    /* ─── Search clear ────────────────────────────────────────────────────── */
+    .search-wrap { position: relative; }
+    .search-wrap .bi-x-circle {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      cursor: pointer; color: #aaa; display: none;
+    }
+    .search-wrap input:not(:placeholder-shown) ~ .bi-x-circle { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="d-flex" id="app-wrapper">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <nav id="sidebar" class="d-flex flex-column bg-dark text-white flex-shrink-0">
+
+    <div class="sidebar-brand d-flex align-items-center justify-content-center px-3 py-2">
+      <img src="/logo.png" alt="Logo" class="sidebar-logo-img sidebar-text">
+      <div class="sidebar-logo-icon">
+        <i class="bi bi-wrench-adjustable-circle"></i>
+      </div>
+    </div>
+
+    <ul class="nav flex-column flex-grow-1 p-2 gap-1" id="sidebarNav" style="overflow-y:auto;overflow-x:hidden">
+
+      <li class="nav-item">
+        <a class="nav-link active" id="navTodas" onclick="setView('todas')">
+          <i class="bi bi-grid-3x3-gap nav-icon"></i>
+          <span class="sidebar-text ms-2">Todas as Peças</span>
+          <span class="badge bg-secondary ms-auto sidebar-text" id="badgeTodas">0</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="navVeiculos" onclick="setView('veiculos')">
+          <i class="bi bi-truck nav-icon"></i>
+          <span class="sidebar-text ms-2">Por Veículo</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="navPendentes" onclick="setView('pendentes')">
+          <i class="bi bi-exclamation-triangle nav-icon"></i>
+          <span class="sidebar-text ms-2">A Verificar</span>
+          <span class="badge bg-warning text-dark ms-auto sidebar-text" id="badgePendentes">0</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="navFora" onclick="setView('fora')">
+          <i class="bi bi-x-circle nav-icon"></i>
+          <span class="sidebar-text ms-2">Fora da Frota</span>
+          <span class="badge bg-danger ms-auto sidebar-text" id="badgeFora">0</span>
+        </a>
+      </li>
+
+      <!-- Categorias collapsible -->
+      <li class="mt-2">
+        <div class="section-header" onclick="toggleSection('cats')">
+          <span class="section-title">Categorias</span>
+          <i class="bi bi-chevron-down section-chevron open" id="chevronCats"></i>
+        </div>
+        <div class="sidebar-collapse" id="collapseCats" style="max-height:600px">
+          <div id="sidebarCats"></div>
+        </div>
+      </li>
+
+      <!-- Frota collapsible -->
+      <li class="mt-1">
+        <div class="section-header" onclick="toggleSection('frota')">
+          <span class="section-title">Veículos (Frota)</span>
+          <i class="bi bi-chevron-down section-chevron open" id="chevronFrota"></i>
+        </div>
+        <div class="sidebar-collapse" id="collapseFrota" style="max-height:1000px">
+          <div id="sidebarFrota"></div>
+        </div>
+      </li>
+
+    </ul>
+  </nav>
+
+  <div id="sidebar-overlay"></div>
+
+  <!-- ── Page Content ─────────────────────────────────────────────────────── -->
+  <div id="content-wrapper" class="flex-grow-1 d-flex flex-column">
+
+    <!-- Topbar -->
+    <div class="topbar bg-white border-bottom px-3 d-flex align-items-center gap-3">
+      <button id="sidebarToggle" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-list fs-5"></i>
+      </button>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+          <li class="breadcrumb-item"><a href="#">Início</a></li>
+          <li class="breadcrumb-item active" id="breadcrumbActive">Todas as Peças</li>
+        </ol>
+      </nav>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <span class="text-muted small" id="topbarInfo"></span>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-grow-1 p-4">
+
+      <!-- KPI Cards -->
+      <div class="row g-3 mb-4" id="kpiSection">
+        <div class="col-6 col-lg-3">
+          <div class="card kpi-card kpi-primary h-100">
+            <div class="card-body position-relative">
+              <div class="kpi-value text-primary" id="kpiItens">—</div>
+              <div class="kpi-label mt-1">Itens Cadastrados</div>
+              <i class="bi bi-clipboard-data text-primary opacity-25" style="font-size:2.5rem;position:absolute;right:16px;top:16px;"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="card kpi-card kpi-info h-100">
+            <div class="card-body position-relative">
+              <div class="kpi-value" style="color:var(--brand-cyan)" id="kpiUnidades">—</div>
+              <div class="kpi-label mt-1">Total de Unidades</div>
+              <i class="bi bi-boxes opacity-25" style="font-size:2.5rem;position:absolute;right:16px;top:16px;color:var(--brand-cyan)"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="card kpi-card kpi-warning h-100">
+            <div class="card-body position-relative">
+              <div class="kpi-value text-warning" id="kpiPendentes">—</div>
+              <div class="kpi-label mt-1">A Verificar</div>
+              <i class="bi bi-exclamation-triangle text-warning opacity-25" style="font-size:2.5rem;position:absolute;right:16px;top:16px;"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="card kpi-card kpi-danger h-100">
+            <div class="card-body position-relative">
+              <div class="kpi-value text-danger" id="kpiFora">—</div>
+              <div class="kpi-label mt-1">Fora da Frota</div>
+              <i class="bi bi-x-circle text-danger opacity-25" style="font-size:2.5rem;position:absolute;right:16px;top:16px;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: TODAS AS PEÇAS ── -->
+      <div id="viewTodas">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fw-bold mb-0"><i class="bi bi-grid-3x3-gap me-2 text-primary"></i>Todas as Peças</h4>
+        </div>
+        <div class="card shadow-sm mb-4">
+          <div class="card-body py-2">
+            <div class="row g-2 align-items-center">
+              <div class="col-sm-7">
+                <div class="search-wrap">
+                  <input id="searchInput" type="search" class="form-control form-control-sm"
+                         placeholder="Buscar por nome, código, fabricante…"
+                         oninput="filterPecas()">
+                  <i class="bi bi-x-circle" onclick="document.getElementById('searchInput').value='';filterPecas()"></i>
+                </div>
+              </div>
+              <div class="col-sm-3">
+                <select id="sortSelect" class="form-select form-select-sm" onchange="filterPecas()">
+                  <option value="nome">Ordenar: Nome</option>
+                  <option value="categoria">Ordenar: Categoria</option>
+                  <option value="quantidade">Ordenar: Quantidade</option>
+                </select>
+              </div>
+              <div class="col-sm-2">
+                <span class="text-muted small" id="resultCount">0 peças</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="pecasGrid" class="row g-3"></div>
+        <div id="emptyState" class="text-center py-5 text-muted" style="display:none">
+          <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+          <p>Nenhuma peça encontrada.</p>
+        </div>
+      </div>
+
+      <!-- ── VIEW: POR VEÍCULO ── -->
+      <div id="viewVeiculos" style="display:none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fw-bold mb-0"><i class="bi bi-truck me-2 text-primary"></i>Peças por Veículo</h4>
+        </div>
+        <div id="veiculosList" class="row g-3"></div>
+        <div id="veiculoPecas" style="display:none">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <button class="btn btn-sm btn-outline-secondary" onclick="backToVeiculos()">
+              <i class="bi bi-arrow-left me-1"></i>Voltar
+            </button>
+            <h5 class="mb-0 fw-bold" id="veiculoTitle"></h5>
+          </div>
+          <div id="veiculoPecasGrid" class="row g-3"></div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: A VERIFICAR ── -->
+      <div id="viewPendentes" style="display:none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fw-bold mb-0"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Peças a Verificar</h4>
+        </div>
+        <div class="alert alert-warning border-0 shadow-sm small mb-3">
+          <i class="bi bi-info-circle me-1"></i>
+          Peças com identificação incompleta — verifique código, fabricante ou compatibilidade de veículo.
+        </div>
+        <div id="pendentesList" class="row g-3"></div>
+      </div>
+
+      <!-- ── VIEW: FORA DA FROTA ── -->
+      <div id="viewFora" style="display:none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fw-bold mb-0"><i class="bi bi-x-circle me-2 text-danger"></i>Fora da Frota</h4>
+        </div>
+        <div class="alert alert-danger border-0 shadow-sm small mb-3">
+          <i class="bi bi-info-circle me-1"></i>
+          Peças sem correspondência com nenhum veículo da frota atual.
+        </div>
+        <div id="foraList" class="row g-3"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ── Modal: Detalhe da Peça ───────────────────────────────────────────── -->
+<div class="modal fade" id="modalPeca" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="badge mb-1" id="mCatBadge"></span>
+          <h5 class="modal-title fw-bold mb-0" id="mNome"></h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-5">
+            <img id="mFotoMain" class="main-photo mb-1" src="" alt="foto" onerror="this.src='';this.style.display='none';document.getElementById('mFotoPlaceholder').style.display='flex'">
+            <div id="mFotoPlaceholder" class="peca-thumb-placeholder rounded" style="display:none;height:240px">
+              <i class="bi bi-image" style="font-size:3rem;color:#b0b8d0"></i>
+            </div>
+            <div class="thumb-strip" id="mThumbs"></div>
+          </div>
+          <div class="col-md-7">
+            <table class="table table-sm table-borderless mb-3">
+              <tbody>
+                <tr><td class="text-muted fw-semibold" style="width:110px">Código</td><td class="fw-semibold" id="mCodigo"></td></tr>
+                <tr><td class="text-muted fw-semibold">Fabricante</td><td id="mFabricante"></td></tr>
+                <tr><td class="text-muted fw-semibold">Categoria</td><td id="mCategoria"></td></tr>
+              </tbody>
+            </table>
+            <div class="mb-3">
+              <div class="fw-semibold small text-muted text-uppercase mb-1" style="letter-spacing:.06em">Descrição</div>
+              <p id="mDescricao" class="mb-0 small lh-lg"></p>
+            </div>
+            <div class="mb-3">
+              <div class="fw-semibold small text-muted text-uppercase mb-1" style="letter-spacing:.06em">Veículos Compatíveis</div>
+              <div id="mVeiculos" class="d-flex flex-wrap gap-1"></div>
+            </div>
+            <div id="mObsWrap" class="mb-3" style="display:none">
+              <div class="fw-semibold small text-muted text-uppercase mb-1" style="letter-spacing:.06em">Observações</div>
+              <p id="mObs" class="mb-0 small text-warning"></p>
+            </div>
+            <hr>
+            <div class="d-flex align-items-center gap-3">
+              <div class="fw-semibold small text-muted text-uppercase" style="letter-spacing:.06em">Quantidade</div>
+              <div class="qty-control">
+                <button class="qty-btn" onclick="changeQty(-1)">−</button>
+                <span class="qty-display" id="mQty">0</span>
+                <button class="qty-btn" onclick="changeQty(1)">+</button>
+              </div>
+              <span class="text-muted small">unidades</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <div id="mPendenteBadge" style="display:none">
+          <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Pendente de Análise</span>
+        </div>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────────────────────── -->
+<div id="toast" class="toast align-items-center border-0" role="alert" style="display:none">
+  <div class="d-flex">
+    <div class="toast-body fw-semibold" id="toastMsg"></div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="hideToast()"></button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ─── State ──────────────────────────────────────────────────────────────── */
+let allPecas  = [];
+let allFrota  = [];
+let currentId = null;
+let modalBs   = null;
+
+/* ─── Sidebar Toggle ─────────────────────────────────────────────────────── */
+(function () {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const btn     = document.getElementById('sidebarToggle');
+  if (!sidebar || !btn) return;
+
+  btn.addEventListener('click', function () {
+    if (window.innerWidth <= 768) {
+      sidebar.classList.toggle('mobile-open');
+      overlay && overlay.classList.toggle('active');
+    } else {
+      sidebar.classList.toggle('collapsed');
+      localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+    }
+  });
+
+  overlay && overlay.addEventListener('click', function () {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+  });
+
+  if (window.innerWidth > 768 && localStorage.getItem('sidebarCollapsed') === 'true') {
+    sidebar.classList.add('collapsed');
+  }
+})();
+
+/* ─── Section collapse ───────────────────────────────────────────────────── */
+function toggleSection(id) {
+  const collapse = document.getElementById('collapse' + id.charAt(0).toUpperCase() + id.slice(1));
+  const chevron  = document.getElementById('chevron'  + id.charAt(0).toUpperCase() + id.slice(1));
+  if (!collapse) return;
+  const isOpen = !collapse.classList.contains('closed');
+  if (isOpen) {
+    collapse.style.maxHeight = collapse.scrollHeight + 'px';
+    requestAnimationFrame(() => {
+      collapse.style.maxHeight = '0px';
+      collapse.classList.add('closed');
+      chevron && chevron.classList.remove('open');
+    });
+  } else {
+    collapse.classList.remove('closed');
+    collapse.style.maxHeight = collapse.scrollHeight + 'px';
+    chevron && chevron.classList.add('open');
+    setTimeout(() => { collapse.style.maxHeight = '2000px'; }, 260);
+  }
+  localStorage.setItem('section_' + id, isOpen ? 'closed' : 'open');
+}
+
+function restoreSections() {
+  ['cats','frota'].forEach(id => {
+    if (localStorage.getItem('section_' + id) === 'closed') {
+      const collapse = document.getElementById('collapse' + id.charAt(0).toUpperCase() + id.slice(1));
+      const chevron  = document.getElementById('chevron'  + id.charAt(0).toUpperCase() + id.slice(1));
+      if (collapse) { collapse.classList.add('closed'); collapse.style.maxHeight = '0px'; }
+      if (chevron)  { chevron.classList.remove('open'); }
+    }
+  });
+}
+
+/* ─── Category colors ─────────────────────────────────────────────────────── */
+const CAT_COLORS = {
+  'Filtros':                 { bg:'#1B2B6E', text:'#fff' },
+  'Freios':                  { bg:'#dc3545', text:'#fff' },
+  'Motor':                   { bg:'#d97706', text:'#fff' },
+  'Embreagem':               { bg:'#7c3aed', text:'#fff' },
+  'Suspensão e Fixação':     { bg:'#0891b2', text:'#fff' },
+  'Carroceria':              { bg:'#059669', text:'#fff' },
+  'Elétrica e Eletrônica':   { bg:'#ea580c', text:'#fff' },
+};
+const CAT_ICONS = {
+  'Filtros':               'bi-funnel',
+  'Freios':                'bi-octagon',
+  'Motor':                 'bi-gear',
+  'Embreagem':             'bi-circle-half',
+  'Suspensão e Fixação':   'bi-arrows-angle-expand',
+  'Carroceria':            'bi-car-front',
+  'Elétrica e Eletrônica': 'bi-lightning-charge',
+};
+
+function catColor(cat) { return (CAT_COLORS[cat] || { bg:'#6c757d', text:'#fff' }); }
+function catIcon(cat)  { return (CAT_ICONS[cat]  || 'bi-box'); }
+
+/* ─── Card renderer ───────────────────────────────────────────────────────── */
+function buildCard(p) {
+  const col = document.createElement('div');
+  col.className = 'col-6 col-md-4 col-xl-3';
+
+  const fotoSrc = p.fotos && p.fotos.length ? `/fotos/${p.fotos[0]}` : '';
+  const imgHtml = fotoSrc
+    ? `<img src="${fotoSrc}" class="peca-thumb" alt="${p.nome}"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+            loading="lazy">
+       <div class="peca-thumb-placeholder" style="display:none"><i class="bi bi-image"></i></div>`
+    : `<div class="peca-thumb-placeholder"><i class="bi bi-image"></i></div>`;
+
+  const cc = catColor(p.categoria);
+  const veics = p.veiculos_compativeis.slice(0,3).map(v => {
+    const placa = v.split(' ')[0];
+    return `<span class="badge rounded-pill" style="background:#e8eaf0;color:#3a3f5c;font-size:.65rem">${placa}</span>`;
+  }).join('');
+  const more = p.veiculos_compativeis.length > 3
+    ? `<span class="badge rounded-pill bg-secondary" style="font-size:.65rem">+${p.veiculos_compativeis.length-3}</span>`
+    : '';
+
+  const pendBadge = p.pendente_analise
+    ? `<span class="badge bg-warning text-dark" style="font-size:.65rem"><i class="bi bi-exclamation-triangle me-1"></i>A verificar</span>`
+    : '';
+  const foraBadge = p.veiculos_compativeis.length === 0
+    ? `<span class="badge bg-danger" style="font-size:.65rem"><i class="bi bi-x-circle me-1"></i>Sem veículo</span>`
+    : '';
+
+  col.innerHTML = `
+    <div class="card shadow-sm h-100 peca-card" onclick="openModal('${p.id}')">
+      ${imgHtml}
+      <div class="card-body p-3">
+        <span class="cat-badge badge mb-2" style="background:${cc.bg};color:${cc.text}">
+          <i class="${catIcon(p.categoria)} me-1"></i>${p.categoria}
+        </span>
+        <h6 class="fw-semibold mb-1 lh-sm" style="font-size:.88rem">${p.nome}</h6>
+        <div class="text-muted small mb-2" style="font-size:.76rem">${p.fabricante}</div>
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="badge rounded-pill" style="background:var(--brand-navy);color:#fff;font-size:.75rem">
+            ${p.quantidade} un.
+          </span>
+          <div class="d-flex gap-1 flex-wrap justify-content-end">${veics}${more}</div>
+        </div>
+        ${(pendBadge || foraBadge) ? `<div class="mt-2 d-flex gap-1">${pendBadge}${foraBadge}</div>` : ''}
+      </div>
+    </div>`;
+  return col;
+}
+
+/* ─── Filter / sort ─────────────────────────────────────────────────────── */
+function filterPecas() {
+  const q    = (document.getElementById('searchInput').value || '').toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+
+  let list = allPecas.filter(p =>
+    !q ||
+    p.nome.toLowerCase().includes(q) ||
+    p.descricao.toLowerCase().includes(q) ||
+    p.codigo.toLowerCase().includes(q) ||
+    p.fabricante.toLowerCase().includes(q)
+  );
+
+  list = list.slice().sort((a,b) => {
+    if (sort === 'quantidade') return b.quantidade - a.quantidade;
+    if (sort === 'categoria')  return a.categoria.localeCompare(b.categoria);
+    return a.nome.localeCompare(b.nome);
+  });
+
+  const grid  = document.getElementById('pecasGrid');
+  const empty = document.getElementById('emptyState');
+  grid.innerHTML = '';
+  if (!list.length) { empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  list.forEach(p => grid.appendChild(buildCard(p)));
+  document.getElementById('resultCount').textContent = `${list.length} peça${list.length !== 1 ? 's' : ''}`;
+}
+
+/* ─── Views ─────────────────────────────────────────────────────────────── */
+const VIEWS = ['todas','veiculos','pendentes','fora'];
+const VIEW_LABELS = { todas:'Todas as Peças', veiculos:'Por Veículo', pendentes:'A Verificar', fora:'Fora da Frota' };
+
+function setView(v) {
+  VIEWS.forEach(id => {
+    document.getElementById('view' + id.charAt(0).toUpperCase() + id.slice(1)).style.display = id === v ? '' : 'none';
+    const nav = document.getElementById('nav' + id.charAt(0).toUpperCase() + id.slice(1));
+    if (nav) nav.classList.toggle('active', id === v);
+  });
+  document.getElementById('breadcrumbActive').textContent = VIEW_LABELS[v] || v;
+  if (v === 'todas')    filterPecas();
+  if (v === 'pendentes') renderList('pendentesList', allPecas.filter(p => p.pendente_analise));
+  if (v === 'fora')      renderList('foraList',      allPecas.filter(p => p.veiculos_compativeis.length === 0));
+  if (v === 'veiculos')  renderVeiculos();
+}
+
+function renderList(containerId, list) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  list.forEach(p => c.appendChild(buildCard(p)));
+}
+
+/* ─── Vehicle view ─────────────────────────────────────────────────────── */
+function renderVeiculos() {
+  const list = document.getElementById('veiculosList');
+  const det  = document.getElementById('veiculoPecas');
+  list.style.display = '';
+  det.style.display  = 'none';
+  list.innerHTML = '';
+
+  allFrota.forEach(v => {
+    const pecas = allPecas.filter(p =>
+      p.veiculos_compativeis.some(vc => vc.includes(v.placa.toUpperCase()))
+    );
+    const modeloTag = v.modelo.split(' ').slice(0,2).join(' ');
+    const col = document.createElement('div');
+    col.className = 'col-12 col-md-6 col-xl-4';
+    col.innerHTML = `
+      <div class="card shadow-sm vehicle-card h-100" onclick="showVeiculoPecas('${v.placa}')">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width:48px;height:48px;background:#e8eaf0;color:var(--brand-navy)">
+              <i class="bi bi-truck fs-4"></i>
+            </div>
+            <div class="flex-grow-1 min-width-0">
+              <div class="fw-bold">${v.placa}</div>
+              <div class="text-muted small">${v.modelo}</div>
+            </div>
+            <span class="badge rounded-pill" style="background:var(--brand-navy);color:#fff">${pecas.length} peças</span>
+          </div>
+        </div>
+      </div>`;
+    list.appendChild(col);
+  });
+}
+
+function showVeiculoPecas(placa) {
+  const veiculo = allFrota.find(v => v.placa.toUpperCase() === placa.toUpperCase());
+  const pecas   = allPecas.filter(p =>
+    p.veiculos_compativeis.some(v => v.includes(placa.toUpperCase()))
+  );
+
+  document.getElementById('veiculosList').style.display  = 'none';
+  const det = document.getElementById('veiculoPecas');
+  det.style.display = '';
+
+  document.getElementById('veiculoTitle').innerHTML =
+    `<i class="bi bi-truck me-2 text-primary"></i>${veiculo ? veiculo.modelo : placa} — ${placa}
+     <span class="badge ms-2" style="background:var(--brand-navy);color:#fff">${pecas.length} peças</span>`;
+
+  const grid = document.getElementById('veiculoPecasGrid');
+  grid.innerHTML = '';
+  pecas.forEach(p => grid.appendChild(buildCard(p)));
+}
+
+function backToVeiculos() {
+  document.getElementById('veiculosList').style.display = '';
+  document.getElementById('veiculoPecas').style.display = 'none';
+}
+
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
+function openModal(id) {
+  const p = allPecas.find(x => x.id === id);
+  if (!p) return;
+  currentId = id;
+
+  document.getElementById('mNome').textContent       = p.nome;
+  document.getElementById('mCodigo').textContent     = p.codigo || '—';
+  document.getElementById('mFabricante').textContent = p.fabricante || '—';
+  document.getElementById('mCategoria').textContent  = p.categoria  || '—';
+  document.getElementById('mDescricao').textContent  = p.descricao  || '—';
+  document.getElementById('mQty').textContent        = p.quantidade;
+
+  const cc = catColor(p.categoria);
+  const badge = document.getElementById('mCatBadge');
+  badge.textContent  = p.categoria;
+  badge.style.background = cc.bg;
+  badge.style.color      = cc.text;
+
+  const veicsEl = document.getElementById('mVeiculos');
+  veicsEl.innerHTML = p.veiculos_compativeis.length
+    ? p.veiculos_compativeis.map(v =>
+        `<span class="badge rounded-pill" style="background:#e8eaf0;color:#3a3f5c">${v}</span>`
+      ).join('')
+    : '<span class="text-muted small">Nenhum veículo associado</span>';
+
+  const obsWrap = document.getElementById('mObsWrap');
+  if (p.observacoes) {
+    document.getElementById('mObs').textContent = p.observacoes;
+    obsWrap.style.display = '';
+  } else { obsWrap.style.display = 'none'; }
+
+  document.getElementById('mPendenteBadge').style.display = p.pendente_analise ? '' : 'none';
+
+  // Photos
+  const mainImg = document.getElementById('mFotoMain');
+  const placeholder = document.getElementById('mFotoPlaceholder');
+  const thumbs = document.getElementById('mThumbs');
+  thumbs.innerHTML = '';
+
+  if (p.fotos && p.fotos.length) {
+    mainImg.src = `/fotos/${p.fotos[0]}`;
+    mainImg.style.display = '';
+    placeholder.style.display = 'none';
+    p.fotos.forEach((f, i) => {
+      const img = document.createElement('img');
+      img.src = `/fotos/${f}`;
+      img.className = i === 0 ? 'active' : '';
+      img.onclick = () => {
+        mainImg.src = `/fotos/${f}`;
+        mainImg.style.display = '';
+        placeholder.style.display = 'none';
+        thumbs.querySelectorAll('img').forEach(t => t.classList.remove('active'));
+        img.classList.add('active');
+      };
+      thumbs.appendChild(img);
+    });
+  } else {
+    mainImg.style.display = 'none';
+    placeholder.style.display = 'flex';
+  }
+
+  if (!modalBs) modalBs = new bootstrap.Modal(document.getElementById('modalPeca'));
+  modalBs.show();
+}
+
+/* ─── Quantity update ─────────────────────────────────────────────────────── */
+function changeQty(delta) {
+  const p = allPecas.find(x => x.id === currentId);
+  if (!p) return;
+  const newQty = Math.max(0, p.quantidade + delta);
+
+  fetch(`/api/pecas/${currentId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quantidade: newQty })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      p.quantidade = data.peca.quantidade;
+      document.getElementById('mQty').textContent = p.quantidade;
+      showToast(`Quantidade atualizada: ${p.quantidade} un.`, 'success');
+    }
+  })
+  .catch(() => showToast('Erro ao atualizar.', 'danger'));
+}
+
+/* ─── Toast ──────────────────────────────────────────────────────────────── */
+let toastTimer = null;
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.className = `toast align-items-center text-white border-0 bg-${type === 'success' ? 'success' : 'danger'}`;
+  document.getElementById('toastMsg').textContent = msg;
+  el.style.display = 'block';
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 3000);
+}
+function hideToast() {
+  document.getElementById('toast').style.display = 'none';
+}
+
+/* ─── Sidebar dynamic ─────────────────────────────────────────────────────── */
+function buildSidebarCats(cats) {
+  const el = document.getElementById('sidebarCats');
+  el.innerHTML = '';
+  cats.forEach(c => {
+    const cc = catColor(c.categoria);
+    const li = document.createElement('li');
+    li.className = 'nav-item';
+    li.innerHTML = `
+      <a class="nav-link" onclick="filterByCategoria('${c.categoria}')">
+        <span class="nav-icon" style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="width:10px;height:10px;border-radius:50%;background:${cc.bg};display:inline-block"></span>
+        </span>
+        <span class="sidebar-text ms-2" style="flex:1;overflow:hidden;text-overflow:ellipsis">${c.categoria}</span>
+        <span class="badge bg-secondary ms-1 sidebar-text" style="font-size:.65rem;flex-shrink:0">${c.total}</span>
+      </a>`;
+    el.appendChild(li);
+  });
+}
+
+function buildSidebarFrota(frota) {
+  const el = document.getElementById('sidebarFrota');
+  el.innerHTML = '';
+  frota.forEach(v => {
+    const li = document.createElement('li');
+    li.className = 'nav-item';
+    const modelo = v.modelo.replace('VW/','').split(' ').slice(0,2).join(' ');
+    li.innerHTML = `
+      <a class="nav-link" onclick="setView('veiculos');setTimeout(()=>showVeiculoPecas('${v.placa}'),50)">
+        <i class="bi bi-truck nav-icon"></i>
+        <span class="sidebar-text ms-2" style="flex:1;overflow:hidden;text-overflow:ellipsis">${v.placa}</span>
+        <span class="badge ms-1 sidebar-text" style="background:rgba(255,255,255,0.15);font-size:.62rem;flex-shrink:0">${modelo}</span>
+      </a>`;
+    el.appendChild(li);
+  });
+}
+
+function filterByCategoria(cat) {
+  setView('todas');
+  document.getElementById('searchInput').value = cat;
+  filterPecas();
+}
+
+/* ─── Init ────────────────────────────────────────────────────────────────── */
+async function init() {
+  const [pecasRes, frotaRes, statsRes, catsRes] = await Promise.all([
+    fetch('/api/pecas'),
+    fetch('/api/frota'),
+    fetch('/api/stats'),
+    fetch('/api/categorias'),
+  ]);
+  const pecasData = await pecasRes.json();
+  const frotaData = await frotaRes.json();
+  const stats     = await statsRes.json();
+  const catsData  = await catsRes.json();
+
+  allPecas = pecasData.pecas || [];
+  allFrota = frotaData.frota || [];
+
+  // KPIs
+  document.getElementById('kpiItens').textContent     = stats.total_itens     || 0;
+  document.getElementById('kpiUnidades').textContent  = stats.total_unidades  || 0;
+  document.getElementById('kpiPendentes').textContent = stats.pendentes_analise|| 0;
+  document.getElementById('kpiFora').textContent      = stats.fora_da_frota   || 0;
+
+  // Sidebar badges
+  document.getElementById('badgeTodas').textContent    = allPecas.length;
+  document.getElementById('badgePendentes').textContent = stats.pendentes_analise || 0;
+  document.getElementById('badgeFora').textContent      = stats.fora_da_frota    || 0;
+
+  // Topbar info
+  const now = new Date();
+  document.getElementById('topbarInfo').textContent =
+    now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' +
+    now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  buildSidebarCats(catsData);
+  buildSidebarFrota(allFrota);
+  restoreSections();
+  filterPecas();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && modalBs) modalBs.hide();
+});
+</script>
+</body>
+</html>
