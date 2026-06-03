@@ -4,13 +4,38 @@ const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
 const https   = require('https');
+const crypto  = require('crypto');
 const multer  = require('multer');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// ─── Persistência (volume Railway em produção, repo local em dev) ──────────────
+// DATA_DIR aponta para um volume persistente (ex: /data). Sem ele, usa o próprio dir.
+const DATA_DIR     = process.env.DATA_DIR || __dirname;
+const CATALOG_PATH = path.join(DATA_DIR, 'catalog.json');
+const fotosDir     = path.join(DATA_DIR, 'fotos');
+
+// Seed inicial: copia catálogo e fotos empacotados para o volume vazio (1º boot)
+(function seedVolume() {
+  if (DATA_DIR === __dirname) return;
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  const bundledCatalog = path.join(__dirname, 'catalog.json');
+  if (!fs.existsSync(CATALOG_PATH) && fs.existsSync(bundledCatalog)) {
+    fs.copyFileSync(bundledCatalog, CATALOG_PATH);
+  }
+  const bundledFotos = path.join(__dirname, 'public', 'fotos');
+  if (!fs.existsSync(fotosDir)) {
+    fs.mkdirSync(fotosDir, { recursive: true });
+    if (fs.existsSync(bundledFotos)) {
+      for (const f of fs.readdirSync(bundledFotos)) {
+        try { fs.copyFileSync(path.join(bundledFotos, f), path.join(fotosDir, f)); } catch (_) {}
+      }
+    }
+  }
+})();
+
 // ─── Multer (upload de fotos) ─────────────────────────────────────────────────
-const fotosDir = path.join(__dirname, 'public', 'fotos');
 if (!fs.existsSync(fotosDir)) fs.mkdirSync(fotosDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -24,10 +49,10 @@ const upload = multer({ storage, limits: { fileSize: 15 * 1024 * 1024 } });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function loadCatalog() {
-  return JSON.parse(fs.readFileSync(path.join(__dirname, 'catalog.json'), 'utf-8'));
+  return JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf-8'));
 }
 function saveCatalog(catalog) {
-  fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2), 'utf-8');
+  fs.writeFileSync(CATALOG_PATH, JSON.stringify(catalog, null, 2), 'utf-8');
 }
 
 function httpsGet(url) {
@@ -62,9 +87,63 @@ function httpsPost(url, payload) {
   });
 }
 
+// ─── Autenticação / SSO ───────────────────────────────────────────────────────
+const PORTAL_SECRET = process.env.PORTAL_SECRET || 'bolsao-sso-secret-2025';
+const PECAS_SENHA   = process.env.PECAS_SENHA   || 'pecas2026';
+const PORTAL_URL    = process.env.PORTAL_URL    || 'http://localhost:5000';
+
+function _hmac40(secret, msg) {
+  return crypto.createHmac('sha256', secret).update(msg).digest('hex').slice(0, 40);
+}
+
+// Valida token SSO gerado pelo portal (mesmo formato dos apps Flask)
+function validarTokenSSO(token, appId, maxAge = 90) {
+  try {
+    const decoded = Buffer.from(token, 'base64url').toString('utf-8');
+    const [ts, tid, sig] = decoded.split(':');
+    if (tid !== appId) return false;
+    if (Date.now() / 1000 - parseInt(ts) > maxAge) return false;
+    const expected = _hmac40(PORTAL_SECRET, `${ts}:${tid}`);
+    return sig.length === expected.length &&
+           crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  } catch (_) { return false; }
+}
+
+// Cookie de sessão assinado (validade 8h)
+function gerarAuthCookie() {
+  const ts = String(Math.floor(Date.now() / 1000));
+  return `${ts}.${_hmac40(PORTAL_SECRET, ts)}`;
+}
+function validarAuthCookie(val) {
+  if (!val) return false;
+  const [ts, sig] = val.split('.');
+  if (!ts || !sig) return false;
+  if (Date.now() / 1000 - parseInt(ts) > 8 * 3600) return false;
+  const expected = _hmac40(PORTAL_SECRET, ts);
+  try {
+    return sig.length === expected.length &&
+           crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  } catch (_) { return false; }
+}
+function getCookie(req, nome) {
+  const m = (req.headers.cookie || '').match(new RegExp('(?:^|; )' + nome + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+// Guard de autenticação (antes do static — protege também o SPA)
+const _ROTAS_PUBLICAS = ['/health', '/portal-auth', '/login', '/logout'];
+app.use((req, res, next) => {
+  if (_ROTAS_PUBLICAS.includes(req.path)) return next();
+  if (validarAuthCookie(getCookie(req, 'pecas_auth'))) return next();
+  if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'não autenticado' });
+  return res.redirect('/login');
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── FOTOS ────────────────────────────────────────────────────────────────────
@@ -362,6 +441,70 @@ app.get('/api/preco/:id', async (req, res) => {
       exemplos: items.slice(0, 3).map(i => ({ titulo: i.title.substring(0, 70), preco: i.price, url: i.permalink }))
     });
   } catch(e) { res.json({ found: false, error: e.message }); }
+});
+
+// ─── AUTENTICAÇÃO / SSO / HEALTH ───────────────────────────────────────────────
+app.get('/health', (req, res) => res.json({ status: 'ok', sistema: 'Bolsão Peças' }));
+
+app.get('/portal-auth', (req, res) => {
+  if (validarTokenSSO(req.query.token || '', 'pecas')) {
+    res.setHeader('Set-Cookie',
+      `pecas_auth=${gerarAuthCookie()}; HttpOnly; Path=/; Max-Age=28800; SameSite=Lax`);
+  }
+  res.redirect('/');
+});
+
+app.get('/logout', (req, res) => {
+  res.setHeader('Set-Cookie', 'pecas_auth=; HttpOnly; Path=/; Max-Age=0');
+  res.redirect('/login');
+});
+
+function _paginaLogin(erro) {
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Bolsão Peças</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#1B2B6E;--orange:#F5941D;--cyan:#00BFDF}
+  *{box-sizing:border-box} body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    font-family:'Nunito',sans-serif;background:linear-gradient(135deg,var(--navy),var(--cyan));padding:1rem}
+  .card{background:#fff;border-radius:1rem;border-top:5px solid var(--orange);box-shadow:0 12px 40px rgba(0,0,0,.25);
+    width:100%;max-width:360px;padding:2.5rem 2rem 2rem;text-align:center}
+  .icon{font-size:3rem}
+  h1{color:var(--navy);font-weight:800;font-size:1.35rem;margin:.5rem 0 .25rem}
+  p.sub{color:#8a92b2;font-size:.85rem;margin:0 0 1.5rem}
+  label{display:block;text-align:left;font-weight:600;color:#3a3f5c;font-size:.85rem;margin-bottom:.35rem}
+  input{width:100%;padding:.6rem .75rem;border:1px solid #d0d4e4;border-radius:.5rem;font-size:1rem;font-family:inherit}
+  input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,191,223,.15)}
+  button{width:100%;margin-top:1rem;padding:.65rem;border:none;border-radius:.5rem;background:var(--navy);color:#fff;
+    font-weight:700;font-size:1rem;font-family:inherit;cursor:pointer;transition:background .15s}
+  button:hover{background:var(--orange)}
+  .erro{background:#f8d7da;color:#842029;border-radius:.4rem;padding:.5rem;font-size:.85rem;margin-bottom:1rem}
+</style></head><body>
+  <form class="card" method="POST" action="/login">
+    <div class="icon">🔧</div>
+    <h1>Bolsão Peças</h1>
+    <p class="sub">Catálogo de Peças Veiculares</p>
+    ${erro ? '<div class="erro">Senha incorreta.</div>' : ''}
+    <label>Senha de acesso</label>
+    <input type="password" name="senha" autofocus required>
+    <button type="submit">Entrar</button>
+  </form>
+</body></html>`;
+}
+
+app.get('/login', (req, res) => {
+  if (validarAuthCookie(getCookie(req, 'pecas_auth'))) return res.redirect('/');
+  res.send(_paginaLogin(false));
+});
+
+app.post('/login', (req, res) => {
+  if ((req.body.senha || '') === PECAS_SENHA) {
+    res.setHeader('Set-Cookie',
+      `pecas_auth=${gerarAuthCookie()}; HttpOnly; Path=/; Max-Age=28800; SameSite=Lax`);
+    return res.redirect('/');
+  }
+  res.status(401).send(_paginaLogin(true));
 });
 
 // ─── FALLBACK ─────────────────────────────────────────────────────────────────
