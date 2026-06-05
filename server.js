@@ -192,14 +192,14 @@ async function sistemaAtivo() {
   return _ksCache.ativo;
 }
 const _PAGINA_OFF = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Sistema desligado</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Sistema indisponível</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
 <style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
 font-family:'Nunito',sans-serif;background:linear-gradient(135deg,#1B2B6E,#00BFDF);color:#fff;text-align:center;padding:1rem}
 .box{max-width:420px}.ic{font-size:4rem;margin-bottom:1rem}h1{font-weight:800;font-size:1.5rem;margin:.5rem 0}
 p{opacity:.9;line-height:1.5}</style></head><body><div class="box">
-<div class="ic">🔌</div><h1>Sistema temporariamente desligado</h1>
-<p>O acesso foi desativado pelo administrador no Portal de Gestão. Tente novamente mais tarde.</p>
+<div class="ic">⚙️</div><h1>Sistema temporariamente indisponível</h1>
+<p>Estamos enfrentando uma instabilidade técnica no momento. Por favor, tente novamente em alguns minutos.</p>
 </div></body></html>`;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
