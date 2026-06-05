@@ -109,21 +109,69 @@ function validarTokenSSO(token, appId, maxAge = 90) {
   } catch (_) { return false; }
 }
 
-// Cookie de sessão assinado (validade 8h)
-function gerarAuthCookie() {
-  const ts = String(Math.floor(Date.now() / 1000));
-  return `${ts}.${_hmac40(PORTAL_SECRET, ts)}`;
+// Cookie de sessão assinado (validade 8h) — formato: ts.profileId.sig
+function gerarAuthCookie(profileId) {
+  const ts  = String(Math.floor(Date.now() / 1000));
+  const sig = _hmac40(PORTAL_SECRET, `${ts}:${profileId}`);
+  return `${ts}.${profileId}.${sig}`;
 }
+// Retorna profileId (string truthy) quando válido, ou null
 function validarAuthCookie(val) {
-  if (!val) return false;
-  const [ts, sig] = val.split('.');
-  if (!ts || !sig) return false;
-  if (Date.now() / 1000 - parseInt(ts) > 8 * 3600) return false;
-  const expected = _hmac40(PORTAL_SECRET, ts);
-  try {
-    return sig.length === expected.length &&
-           crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
-  } catch (_) { return false; }
+  if (!val) return null;
+  const parts = val.split('.');
+  // Novo formato: ts.profileId.sig
+  if (parts.length === 3) {
+    const [ts, profileId, sig] = parts;
+    if (Date.now() / 1000 - parseInt(ts) > 8 * 3600) return null;
+    const expected = _hmac40(PORTAL_SECRET, `${ts}:${profileId}`);
+    try {
+      if (sig.length !== expected.length) return null;
+      if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+      return profileId;
+    } catch (_) { return null; }
+  }
+  // Legado: ts.sig — retrocompatibilidade (trata como admin)
+  if (parts.length === 2) {
+    const [ts, sig] = parts;
+    if (Date.now() / 1000 - parseInt(ts) > 8 * 3600) return null;
+    const expected = _hmac40(PORTAL_SECRET, ts);
+    try {
+      if (sig.length !== expected.length) return null;
+      if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+      return '_legacy_admin';
+    } catch (_) { return null; }
+  }
+  return null;
+}
+function getPerfilFromReq(req) {
+  const profileId = validarAuthCookie(getCookie(req, 'pecas_auth'));
+  if (!profileId) return null;
+  const catalog = loadCatalog();
+  const perfis  = catalog.perfis || [];
+  if (!perfis.length || profileId === '_legacy_admin') {
+    const admin = perfis.find(p => p.papel === 'admin' && p.ativo);
+    return admin ? { id: admin.id, nome: admin.nome, papel: admin.papel }
+                 : { id: '_admin', nome: 'Administrador', papel: 'admin' };
+  }
+  const p = perfis.find(p => p.id === profileId);
+  return (p && p.ativo) ? { id: p.id, nome: p.nome, papel: p.papel } : null;
+}
+function ensureAdmin(req, res, next) {
+  const p = getPerfilFromReq(req);
+  if (!p || p.papel !== 'admin')
+    return res.status(403).json({ error: 'Permissão negada. Apenas administradores.' });
+  next();
+}
+function seedPerfis() {
+  const catalog = loadCatalog();
+  if (catalog.perfis && catalog.perfis.length > 0) return;
+  if (!catalog.perfis) catalog.perfis = [];
+  catalog.perfis.push({
+    id: 'prf001', nome: 'Administrador', papel: 'admin',
+    senha: PECAS_SENHA, ativo: true, criado_em: new Date().toISOString()
+  });
+  saveCatalog(catalog);
+  console.log('✅ Perfil administrador criado com a senha padrão (PECAS_SENHA)');
 }
 function getCookie(req, nome) {
   const m = (req.headers.cookie || '').match(new RegExp('(?:^|; )' + nome + '=([^;]*)'));
@@ -221,6 +269,9 @@ app.put('/api/pecas/:id', (req, res) => {
 });
 
 app.delete('/api/pecas/:id', (req, res) => {
+  const perfil = getPerfilFromReq(req);
+  if (!perfil || perfil.papel !== 'admin')
+    return res.status(403).json({ error: 'Apenas administradores podem excluir peças.' });
   const catalog = loadCatalog();
   const idx = catalog.pecas.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Peça não encontrada' });
@@ -362,6 +413,77 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// ─── PERFIS DE ACESSO ─────────────────────────────────────────────────────────
+app.get('/api/me', (req, res) => {
+  const p = getPerfilFromReq(req);
+  if (!p) return res.status(401).json({ error: 'não autenticado' });
+  res.json({ id: p.id, nome: p.nome, papel: p.papel });
+});
+
+app.get('/api/perfis', ensureAdmin, (req, res) => {
+  const catalog = loadCatalog();
+  const perfis = (catalog.perfis || []).map(p => ({
+    id: p.id, nome: p.nome, papel: p.papel, ativo: p.ativo, criado_em: p.criado_em
+  }));
+  res.json(perfis);
+});
+
+app.post('/api/perfis', ensureAdmin, (req, res) => {
+  const { nome, papel, senha } = req.body;
+  if (!nome || !papel || !senha) return res.status(400).json({ error: 'nome, papel e senha são obrigatórios' });
+  if (!['admin', 'operador'].includes(papel)) return res.status(400).json({ error: 'papel inválido' });
+  const catalog = loadCatalog();
+  if (!catalog.perfis) catalog.perfis = [];
+  if (catalog.perfis.some(p => p.nome.toLowerCase() === nome.toLowerCase()))
+    return res.status(409).json({ error: 'Já existe um perfil com este nome' });
+  const maxNum = catalog.perfis.reduce((m, p) => {
+    const n = parseInt(p.id.replace('prf', '')); return (n > m ? n : m);
+  }, 0);
+  const perfil = {
+    id: 'prf' + String(maxNum + 1).padStart(3, '0'),
+    nome, papel, senha, ativo: true, criado_em: new Date().toISOString()
+  };
+  catalog.perfis.push(perfil);
+  saveCatalog(catalog);
+  res.json({ success: true, perfil: { id: perfil.id, nome: perfil.nome, papel: perfil.papel, ativo: perfil.ativo } });
+});
+
+app.put('/api/perfis/:id', ensureAdmin, (req, res) => {
+  const catalog = loadCatalog();
+  if (!catalog.perfis) return res.status(404).json({ error: 'Perfil não encontrado' });
+  const idx = catalog.perfis.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Perfil não encontrado' });
+  const { nome, papel, senha, ativo } = req.body;
+  if (nome) {
+    if (catalog.perfis.some((p, i) => i !== idx && p.nome.toLowerCase() === nome.toLowerCase()))
+      return res.status(409).json({ error: 'Já existe um perfil com este nome' });
+    catalog.perfis[idx].nome = nome;
+  }
+  if (papel && ['admin', 'operador'].includes(papel)) catalog.perfis[idx].papel = papel;
+  if (senha) catalog.perfis[idx].senha = senha;
+  if (ativo !== undefined) catalog.perfis[idx].ativo = !!ativo;
+  saveCatalog(catalog);
+  const p = catalog.perfis[idx];
+  res.json({ success: true, perfil: { id: p.id, nome: p.nome, papel: p.papel, ativo: p.ativo } });
+});
+
+app.delete('/api/perfis/:id', ensureAdmin, (req, res) => {
+  const meId = getPerfilFromReq(req)?.id;
+  const catalog = loadCatalog();
+  if (!catalog.perfis) return res.status(404).json({ error: 'Perfil não encontrado' });
+  const idx = catalog.perfis.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Perfil não encontrado' });
+  if (catalog.perfis[idx].id === meId)
+    return res.status(400).json({ error: 'Você não pode excluir seu próprio perfil.' });
+  const isAdmin    = catalog.perfis[idx].papel === 'admin';
+  const adminCount = catalog.perfis.filter(p => p.papel === 'admin' && p.ativo).length;
+  if (isAdmin && adminCount <= 1)
+    return res.status(400).json({ error: 'Não é possível excluir o único administrador.' });
+  catalog.perfis.splice(idx, 1);
+  saveCatalog(catalog);
+  res.json({ success: true });
+});
+
 // ─── ANÁLISE IA (GEMINI) ─────────────────────────────────────────────────
 app.post('/api/analisar-foto', upload.single('foto'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhuma foto enviada' });
@@ -448,8 +570,11 @@ app.get('/health', (req, res) => res.json({ status: 'ok', sistema: 'Bolsão Peç
 
 app.get('/portal-auth', (req, res) => {
   if (validarTokenSSO(req.query.token || '', 'pecas')) {
+    const catalog = loadCatalog();
+    const admin   = (catalog.perfis || []).find(p => p.papel === 'admin' && p.ativo);
+    const pid     = admin ? admin.id : '_legacy_admin';
     res.setHeader('Set-Cookie',
-      `pecas_auth=${gerarAuthCookie()}; HttpOnly; Path=/; Max-Age=28800; SameSite=Lax`);
+      `pecas_auth=${gerarAuthCookie(pid)}; HttpOnly; Path=/; Max-Age=28800; SameSite=Lax`);
   }
   res.redirect('/');
 });
@@ -486,8 +611,10 @@ function _paginaLogin(erro) {
     <h1>Bolsão Peças</h1>
     <p class="sub">Catálogo de Peças Veiculares</p>
     ${erro ? '<div class="erro">Senha incorreta.</div>' : ''}
-    <label>Senha de acesso</label>
-    <input type="password" name="senha" autofocus required>
+    <label>Nome de usuário</label>
+    <input type="text" name="nome" autofocus required autocomplete="username" placeholder="Seu nome">
+    <label style="margin-top:.75rem">Senha</label>
+    <input type="password" name="senha" required autocomplete="current-password" placeholder="••••••">
     <button type="submit">Entrar</button>
   </form>
 </body></html>`;
@@ -499,12 +626,29 @@ app.get('/login', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-  if ((req.body.senha || '') === PECAS_SENHA) {
-    res.setHeader('Set-Cookie',
-      `pecas_auth=${gerarAuthCookie()}; HttpOnly; Path=/; Max-Age=28800; SameSite=Lax`);
-    return res.redirect('/');
+  const { nome, senha } = req.body;
+  const catalog = loadCatalog();
+  const perfis  = catalog.perfis || [];
+
+  // Sem perfis cadastrados → fallback senha única (legado)
+  if (!perfis.length) {
+    if ((senha || '') === PECAS_SENHA) {
+      res.setHeader('Set-Cookie',
+        `pecas_auth=${gerarAuthCookie('_legacy_admin')}; HttpOnly; Path=/; Max-Age=28800; SameSite=Lax`);
+      return res.redirect('/');
+    }
+    return res.status(401).send(_paginaLogin(true));
   }
-  res.status(401).send(_paginaLogin(true));
+
+  const perfil = perfis.find(p =>
+    p.nome.toLowerCase() === (nome || '').trim().toLowerCase() &&
+    p.senha === senha && p.ativo
+  );
+  if (!perfil) return res.status(401).send(_paginaLogin(true));
+
+  res.setHeader('Set-Cookie',
+    `pecas_auth=${gerarAuthCookie(perfil.id)}; HttpOnly; Path=/; Max-Age=28800; SameSite=Lax`);
+  res.redirect('/');
 });
 
 // ─── FALLBACK ─────────────────────────────────────────────────────────────────
@@ -513,6 +657,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
+  seedPerfis();
   console.log(`\n✅ Servidor rodando em http://localhost:${PORT}`);
   console.log(`📦 API disponível em http://localhost:${PORT}/api/pecas\n`);
 });

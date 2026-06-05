@@ -194,6 +194,12 @@
           <span class="sidebar-text ms-2">Movimentações</span>
         </a>
       </li>
+      <li id="navPerfisItem" style="display:none">
+        <a class="nav-link" id="navPerfis" onclick="setView('perfis')">
+          <i class="bi bi-people nav-icon"></i>
+          <span class="sidebar-text ms-2">Perfis de Acesso</span>
+        </a>
+      </li>
 
       <!-- Veículos (Frota) – collapsible, aparece antes das categorias -->
       <li class="mt-2">
@@ -235,6 +241,11 @@
         </ol>
       </nav>
       <div class="ms-auto d-flex align-items-center gap-2">
+        <div id="userChip" class="d-none d-sm-inline-flex align-items-center gap-2" style="display:none!important">
+          <span id="userNome" class="fw-semibold small text-primary"></span>
+          <span id="userPapelBadge" class="badge" style="font-size:.65rem"></span>
+          <a href="/logout" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Sair"><i class="bi bi-box-arrow-right"></i></a>
+        </div>
         <button class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex align-items-center gap-1" onclick="gerarRelatorio()">
           <i class="bi bi-printer"></i><span class="d-none d-md-inline">Relatório</span>
         </button>
@@ -467,6 +478,21 @@
         <div class="card shadow-sm"><div class="card-body p-0" id="movsTableWrap"></div></div>
       </div>
 
+      <!-- ── PERFIS ── -->
+      <div id="viewPerfis" style="display:none">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <h4 class="fw-bold mb-0"><i class="bi bi-people me-2 text-primary"></i>Perfis de Acesso</h4>
+          <button class="btn btn-sm fw-semibold" style="background:var(--brand-orange);color:#fff" onclick="openPerfilModal()">
+            <i class="bi bi-plus-lg me-1"></i>Novo Perfil
+          </button>
+        </div>
+        <div class="card shadow-sm">
+          <div class="card-body p-0" id="perfisTableWrap">
+            <div class="p-4 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -569,6 +595,9 @@
           </button>
         </div>
         <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-danger" id="btnExcluirPeca" style="display:none" onclick="excluirPeca()">
+            <i class="bi bi-trash me-1"></i>Excluir
+          </button>
           <button class="btn btn-sm btn-outline-primary" onclick="openEditModal()">
             <i class="bi bi-pencil me-1"></i>Editar
           </button>
@@ -714,6 +743,50 @@
   </div>
 </div>
 
+<!-- ── Modal: Perfil ─────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalPerfil" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="perfilModalTitle"><i class="bi bi-person-plus me-2"></i>Novo Perfil</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Nome *</label>
+            <input type="text" class="form-control" id="prfNome" placeholder="Ex: João Silva">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Nível de Acesso *</label>
+            <select class="form-select" id="prfPapel">
+              <option value="operador">Operador — consulta, cadastro e baixa</option>
+              <option value="admin">Administrador — acesso total</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Senha *</label>
+            <input type="password" class="form-control" id="prfSenha" placeholder="Senha de acesso" autocomplete="new-password">
+            <div class="form-text" id="prfSenhaHint" style="display:none">Deixe em branco para manter a senha atual.</div>
+          </div>
+          <div class="col-12" id="prfAtivoWrap" style="display:none">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="prfAtivo" checked>
+              <label class="form-check-label" for="prfAtivo">Perfil ativo</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" id="prfSubmitBtn" onclick="submitPerfil()">
+          <i class="bi bi-plus-circle me-1"></i>Criar Perfil
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Toast ──────────────────────────────────────────────────────────────── -->
 <div id="toast" class="toast align-items-center border-0" role="alert" style="display:none">
   <div class="d-flex">
@@ -729,7 +802,8 @@ let allPecas     = [];
 let allFrota     = [];
 let currentId    = null;
 let vehicleFilter = null;
-let modalBs = null, modalNovaBs = null, modalBaixaBs = null;
+let currentUser  = null;
+let modalBs = null, modalNovaBs = null, modalBaixaBs = null, modalPerfilBs = null;
 let chartVeiculos = null, chartCategoria = null, chartMeses = null;
 
 /* ─── Sidebar toggle ──────────────────────────────────────────────────── */
@@ -857,8 +931,8 @@ function updateVehicleFilterUI(){
 }
 
 /* ─── Views ───────────────────────────────────────────────────────────── */
-const VIEWS=['dashboard','todas','veiculos','pendentes','fora','movimentacoes'];
-const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações'};
+const VIEWS=['dashboard','todas','veiculos','pendentes','fora','movimentacoes','perfis'];
+const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações',perfis:'Perfis de Acesso'};
 
 function setView(v){
   VIEWS.forEach(id=>{
@@ -873,6 +947,7 @@ function setView(v){
   if(v==='veiculos')   renderVeiculos();
   if(v==='movimentacoes') loadTodasMovimentacoes();
   if(v==='dashboard')  loadDashboard();
+  if(v==='perfis')     loadPerfis();
   if(v!=='todas'&&vehicleFilter){vehicleFilter=null;updateVehicleFilterUI();}
 }
 
@@ -946,6 +1021,7 @@ function openModal(id){
     });
   } else { main.style.display='none'; ph.style.display='flex'; }
 
+  document.getElementById('btnExcluirPeca').style.display=(currentUser&&currentUser.papel==='admin')?'':'none';
   setupPrecoML(p);
   document.getElementById('historicoResult').innerHTML='<div class="text-muted small">Carregando...</div>';
   if(!modalBs) modalBs=new bootstrap.Modal(document.getElementById('modalPeca'));
@@ -1476,8 +1552,10 @@ ${secoes.map(s=>`
 
 /* ─── Init ────────────────────────────────────────────────────────────── */
 async function init(){
-  const [pr,fr,sr,cr]=await Promise.all([fetch('/api/pecas'),fetch('/api/frota'),fetch('/api/stats'),fetch('/api/categorias')]);
+  const [pr,fr,sr,cr,mr]=await Promise.all([fetch('/api/pecas'),fetch('/api/frota'),fetch('/api/stats'),fetch('/api/categorias'),fetch('/api/me').catch(()=>null)]);
   const [pd,fd,sd,cd]=await Promise.all([pr.json(),fr.json(),sr.json(),cr.json()]);
+  if(mr){ try{ currentUser=await mr.json(); }catch(_){} }
+  applyRole();
   allPecas=pd.pecas||[]; allFrota=fd.frota||[];
   document.getElementById('kpiItens').textContent=sd.total_itens||0;
   document.getElementById('kpiUnidades').textContent=sd.total_unidades||0;
@@ -1493,6 +1571,117 @@ async function init(){
   restoreSections();
   setView('dashboard');
 }
+/* ─── Role / user ─────────────────────────────────────────────────────── */
+function applyRole(){
+  if(!currentUser) return;
+  const chip=document.getElementById('userChip');
+  document.getElementById('userNome').textContent=currentUser.nome;
+  const pb=document.getElementById('userPapelBadge');
+  if(currentUser.papel==='admin'){pb.textContent='Admin';pb.style.background='var(--brand-navy)';pb.style.color='#fff';}
+  else{pb.textContent='Operador';pb.style.background='var(--brand-cyan)';pb.style.color='#fff';}
+  chip.style.removeProperty('display'); chip.classList.remove('d-none');
+  document.getElementById('navPerfisItem').style.display=currentUser.papel==='admin'?'':'none';
+}
+
+/* ─── Excluir peça ────────────────────────────────────────────────────── */
+async function excluirPeca(){
+  const p=allPecas.find(x=>x.id===currentId); if(!p) return;
+  if(!confirm(`Excluir a peça "${p.nome}"?\nEsta ação não pode ser desfeita.`)) return;
+  try{
+    const r=await fetch(`/api/pecas/${currentId}`,{method:'DELETE'});
+    const d=await r.json();
+    if(!d.success){showToast(d.error||'Erro ao excluir.','danger');return;}
+    allPecas=allPecas.filter(x=>x.id!==currentId);
+    if(modalBs) modalBs.hide();
+    reloadStats(); filterPecas();
+    showToast(`"${p.nome}" excluída.`,'success');
+  }catch(e){showToast('Erro ao excluir peça.','danger');}
+}
+
+/* ─── Perfis de Acesso ────────────────────────────────────────────────── */
+let editingPerfilId=null;
+
+function loadPerfis(){
+  const wrap=document.getElementById('perfisTableWrap');
+  wrap.innerHTML='<div class="p-4 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>';
+  fetch('/api/perfis').then(r=>r.json()).then(lista=>{
+    if(!lista.length){wrap.innerHTML='<div class="p-4 text-center text-muted">Nenhum perfil cadastrado.</div>';return;}
+    wrap.innerHTML=`<div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead class="table-dark"><tr><th>Nome</th><th>Nível</th><th>Status</th><th class="text-end">Ações</th></tr></thead>
+      <tbody>${lista.map(p=>`<tr>
+        <td class="fw-semibold">${p.nome}${p.id===currentUser?.id?'<span class="badge bg-secondary ms-2" style="font-size:.6rem">você</span>':''}</td>
+        <td>${p.papel==='admin'?'<span class="badge" style="background:var(--brand-navy)">Administrador</span>':'<span class="badge" style="background:var(--brand-cyan);color:#fff">Operador</span>'}</td>
+        <td>${p.ativo?'<span class="badge bg-success">Ativo</span>':'<span class="badge bg-secondary">Inativo</span>'}</td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-secondary me-1" title="Editar" onclick="openPerfilModal('${p.id}')"><i class="bi bi-pencil"></i></button>
+          ${p.id!==currentUser?.id?`<button class="btn btn-sm btn-outline-danger" title="Excluir" onclick="deletePerfil('${p.id}','${p.nome.replace(/'/g,"\\'")}')"><i class="bi bi-trash"></i></button>`:''}
+        </td></tr>`).join('')}
+      </tbody></table></div>`;
+  }).catch(()=>{wrap.innerHTML='<div class="p-4 text-danger">Erro ao carregar perfis.</div>';});
+}
+
+function openPerfilModal(id=null){
+  editingPerfilId=id;
+  const title=document.getElementById('perfilModalTitle');
+  const submitBtn=document.getElementById('prfSubmitBtn');
+  if(id){
+    fetch('/api/perfis').then(r=>r.json()).then(lista=>{
+      const p=lista.find(x=>x.id===id); if(!p) return;
+      title.innerHTML='<i class="bi bi-pencil me-2"></i>Editar Perfil';
+      submitBtn.innerHTML='<i class="bi bi-check2-circle me-1"></i>Salvar';
+      document.getElementById('prfNome').value=p.nome;
+      document.getElementById('prfPapel').value=p.papel;
+      document.getElementById('prfSenha').value='';
+      document.getElementById('prfAtivo').checked=p.ativo;
+      document.getElementById('prfSenhaHint').style.display='';
+      document.getElementById('prfAtivoWrap').style.display='';
+      if(!modalPerfilBs) modalPerfilBs=new bootstrap.Modal(document.getElementById('modalPerfil'));
+      modalPerfilBs.show();
+    });
+  } else {
+    title.innerHTML='<i class="bi bi-person-plus me-2"></i>Novo Perfil';
+    submitBtn.innerHTML='<i class="bi bi-plus-circle me-1"></i>Criar Perfil';
+    document.getElementById('prfNome').value='';
+    document.getElementById('prfPapel').value='operador';
+    document.getElementById('prfSenha').value='';
+    document.getElementById('prfSenhaHint').style.display='none';
+    document.getElementById('prfAtivoWrap').style.display='none';
+    if(!modalPerfilBs) modalPerfilBs=new bootstrap.Modal(document.getElementById('modalPerfil'));
+    modalPerfilBs.show();
+  }
+}
+
+async function submitPerfil(){
+  const nome=document.getElementById('prfNome').value.trim();
+  const papel=document.getElementById('prfPapel').value;
+  const senha=document.getElementById('prfSenha').value;
+  if(!nome){document.getElementById('prfNome').focus();return;}
+  if(!editingPerfilId&&!senha){document.getElementById('prfSenha').focus();return;}
+  const payload={nome,papel};
+  if(senha) payload.senha=senha;
+  if(editingPerfilId) payload.ativo=document.getElementById('prfAtivo').checked;
+  try{
+    const url=editingPerfilId?`/api/perfis/${editingPerfilId}`:'/api/perfis';
+    const r=await fetch(url,{method:editingPerfilId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(!d.success){showToast(d.error||'Erro.','danger');return;}
+    if(modalPerfilBs) modalPerfilBs.hide();
+    loadPerfis();
+    showToast(editingPerfilId?'Perfil atualizado!':`Perfil "${nome}" criado!`,'success');
+  }catch(e){showToast('Erro ao salvar perfil.','danger');}
+}
+
+async function deletePerfil(id,nome){
+  if(!confirm(`Excluir o perfil "${nome}"? Esta ação não pode ser desfeita.`)) return;
+  try{
+    const r=await fetch(`/api/perfis/${id}`,{method:'DELETE'});
+    const d=await r.json();
+    if(!d.success){showToast(d.error||'Erro.','danger');return;}
+    loadPerfis();
+    showToast(`Perfil "${nome}" excluído.`,'success');
+  }catch(e){showToast('Erro ao excluir perfil.','danger');}
+}
+
 document.addEventListener('DOMContentLoaded',init);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modalBs)modalBs.hide();});
 </script>
