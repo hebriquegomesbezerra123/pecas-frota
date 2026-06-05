@@ -178,10 +178,41 @@ function getCookie(req, nome) {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+// ─── Kill-switch: o portal pode desligar este sistema ──────────────────────────
+const PORTAL_URL_KS = process.env.PORTAL_URL || 'https://web-production-3e595.up.railway.app';
+let _ksCache = { ts: 0, ativo: true };
+async function sistemaAtivo() {
+  const agora = Date.now();
+  if (agora - _ksCache.ts < 30000) return _ksCache.ativo;
+  try {
+    const data = await httpsGet(`${PORTAL_URL_KS}/api/app-status/pecas`);
+    _ksCache.ativo = !(data && data.ativo === false);
+  } catch (_) { _ksCache.ativo = true; }   // fail-open
+  _ksCache.ts = agora;
+  return _ksCache.ativo;
+}
+const _PAGINA_OFF = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Sistema desligado</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+font-family:'Nunito',sans-serif;background:linear-gradient(135deg,#1B2B6E,#00BFDF);color:#fff;text-align:center;padding:1rem}
+.box{max-width:420px}.ic{font-size:4rem;margin-bottom:1rem}h1{font-weight:800;font-size:1.5rem;margin:.5rem 0}
+p{opacity:.9;line-height:1.5}</style></head><body><div class="box">
+<div class="ic">🔌</div><h1>Sistema temporariamente desligado</h1>
+<p>O acesso foi desativado pelo administrador no Portal de Gestão. Tente novamente mais tarde.</p>
+</div></body></html>`;
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Kill-switch (antes de tudo, exceto /health)
+app.use(async (req, res, next) => {
+  if (req.path === '/health') return next();
+  if (await sistemaAtivo()) return next();
+  res.status(503).send(_PAGINA_OFF);
+});
 
 // Guard de autenticação (antes do static — protege também o SPA)
 const _ROTAS_PUBLICAS = ['/health', '/portal-auth', '/login', '/logout'];
