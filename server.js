@@ -215,7 +215,7 @@ app.use(async (req, res, next) => {
 });
 
 // Guard de autenticação (antes do static — protege também o SPA)
-const _ROTAS_PUBLICAS = ['/health', '/portal-auth', '/login', '/logout'];
+const _ROTAS_PUBLICAS = ['/health', '/portal-auth', '/login', '/logout', '/api/resumo'];
 app.use((req, res, next) => {
   if (_ROTAS_PUBLICAS.includes(req.path)) return next();
   if (validarAuthCookie(getCookie(req, 'pecas_auth'))) return next();
@@ -598,6 +598,22 @@ app.get('/api/preco/:id', async (req, res) => {
 
 // ─── AUTENTICAÇÃO / SSO / HEALTH ───────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok', sistema: 'Bolsão Peças' }));
+
+// KPIs para o painel do Portal (público)
+app.get('/api/resumo', (req, res) => {
+  try {
+    const c = loadCatalog();
+    const pecas = c.pecas || [];
+    res.json({
+      total_itens:       pecas.length,
+      total_unidades:    pecas.reduce((s, p) => s + (p.quantidade || 0), 0),
+      pendentes_analise: pecas.filter(p => p.pendente_analise).length,
+      veiculos:          (c.frota || []).length,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 app.get('/portal-auth', (req, res) => {
   if (validarTokenSSO(req.query.token || '', 'pecas')) {
