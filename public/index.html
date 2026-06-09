@@ -1116,20 +1116,36 @@ function openBaixaModal(){
   if(modalBs) modalBs.hide();
   setTimeout(()=>modalBaixaBs.show(),300);
 }
-function submitBaixa(){
+async function submitBaixa(){
   const resp=document.getElementById('bxResponsavel').value.trim(), qtd=parseInt(document.getElementById('bxQtd').value);
   if(!resp){document.getElementById('bxResponsavel').focus();return;}
   if(!qtd||qtd<1){document.getElementById('bxQtd').focus();return;}
-  fetch('/api/movimentacoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-    peca_id:currentId, responsavel:resp, veiculo:document.getElementById('bxVeiculo').value,
-    quantidade:qtd, data:document.getElementById('bxData').value, observacoes:document.getElementById('bxObs').value.trim()
-  })}).then(r=>r.json()).then(res=>{
-    if(res.success){
-      const p=allPecas.find(x=>x.id===currentId); if(p) p.quantidade=res.nova_quantidade;
-      if(modalBaixaBs) modalBaixaBs.hide();
-      showToast(`Baixa registrada! Estoque: ${res.nova_quantidade} un.`,'success');
-    } else showToast(res.error||'Erro.','danger');
-  }).catch(()=>showToast('Erro.','danger'));
+  const btn=document.querySelector('#modalBaixa .modal-footer .btn:last-child');
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Salvando...'; }
+  const payload={peca_id:currentId,responsavel:resp,veiculo:document.getElementById('bxVeiculo').value,
+    quantidade:qtd,data:document.getElementById('bxData').value,observacoes:document.getElementById('bxObs').value.trim()};
+  // Tenta até 3 vezes (protege contra reinício do servidor)
+  let lastErr='Erro de conexão';
+  for(let i=0;i<3;i++){
+    try{
+      const r=await fetch('/api/movimentacoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(r.status===401){window.location.href='/login';return;}
+      const res=await r.json();
+      if(res.success){
+        const p=allPecas.find(x=>x.id===currentId); if(p) p.quantidade=res.nova_quantidade;
+        if(modalBaixaBs) modalBaixaBs.hide();
+        showToast(`Baixa registrada! Estoque: ${res.nova_quantidade} un.`,'success');
+        return;
+      }
+      lastErr=res.error||'Erro ao registrar.';
+      break; // erro de negócio (ex: estoque insuficiente) — não retenta
+    }catch(e){
+      lastErr='Sem conexão com o servidor.';
+      if(i<2) await new Promise(ok=>setTimeout(ok,1500)); // aguarda 1,5s antes de retentar
+    }
+  }
+  if(btn){ btn.disabled=false; btn.innerHTML='<i class="bi bi-check2-circle me-1"></i>Confirmar Baixa'; }
+  showToast(lastErr,'danger');
 }
 
 /* ─── Nova Peça ───────────────────────────────────────────────────────── */
