@@ -164,14 +164,16 @@ function ensureAdmin(req, res, next) {
 }
 function seedPerfis() {
   const catalog = loadCatalog();
-  if (catalog.perfis && catalog.perfis.length > 0) return;
   if (!catalog.perfis) catalog.perfis = [];
-  catalog.perfis.push({
-    id: 'prf001', nome: 'Administrador', papel: 'admin',
-    senha: PECAS_SENHA, ativo: true, criado_em: new Date().toISOString()
-  });
-  saveCatalog(catalog);
-  console.log('✅ Perfil administrador criado com a senha padrão (PECAS_SENHA)');
+  // Garante que o perfil admin padrão sempre existe (upsert, não apaga outros)
+  if (!catalog.perfis.find(p => p.id === 'prf001')) {
+    catalog.perfis.unshift({
+      id: 'prf001', nome: 'Administrador', papel: 'admin',
+      senha: PECAS_SENHA, ativo: true, criado_em: new Date().toISOString()
+    });
+    saveCatalog(catalog);
+    console.log('✅ Perfil administrador (re)criado com a senha padrão (PECAS_SENHA)');
+  }
 }
 function getCookie(req, nome) {
   const m = (req.headers.cookie || '').match(new RegExp('(?:^|; )' + nome + '=([^;]*)'));

@@ -1111,5 +1111,7 @@
       "pendente_analise": true,
       "observacoes": "⚠️ Código não visível. Aplicação genérica para caminhões."
     }
-  ]
+  ],
+  "movimentacoes": [],
+  "perfis": []
 }
