@@ -416,7 +416,7 @@
         <div class="card shadow-sm mb-3">
           <div class="card-body py-2">
             <div class="row g-2 align-items-center">
-              <div class="col-sm-7">
+              <div class="col-sm-5">
                 <div class="search-wrap">
                   <input id="searchInput" type="search" class="form-control form-control-sm"
                          placeholder="Buscar por nome, código, fabricante…" oninput="filterPecas()">
@@ -424,6 +424,11 @@
                 </div>
               </div>
               <div class="col-sm-3">
+                <select id="catSelect" class="form-select form-select-sm" onchange="filterPecas()">
+                  <option value="">Todas as categorias</option>
+                </select>
+              </div>
+              <div class="col-sm-2">
                 <select id="sortSelect" class="form-select form-select-sm" onchange="filterPecas()">
                   <option value="nome">Ordenar: Nome</option>
                   <option value="categoria">Ordenar: Categoria</option>
@@ -471,10 +476,16 @@
 
       <!-- ── MOVIMENTAÇÕES ── -->
       <div id="viewMovimentacoes" style="display:none">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
           <h4 class="fw-bold mb-0"><i class="bi bi-arrow-down-up me-2 text-primary"></i>Histórico de Movimentações</h4>
-          <button class="btn btn-sm btn-outline-secondary" onclick="loadTodasMovimentacoes()"><i class="bi bi-arrow-clockwise me-1"></i>Atualizar</button>
+          <div class="d-flex gap-2">
+            <a href="/api/movimentacoes/export" class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Exportar CSV</a>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadTodasMovimentacoes()"><i class="bi bi-arrow-clockwise me-1"></i>Atualizar</button>
+          </div>
         </div>
+        <div class="card shadow-sm mb-3"><div class="card-body py-2">
+          <input id="movsSearch" type="search" class="form-control form-control-sm" placeholder="Filtrar por peça, responsável ou veículo…" oninput="filterMovs()">
+        </div></div>
         <div class="card shadow-sm"><div class="card-body p-0" id="movsTableWrap"></div></div>
       </div>
 
@@ -803,6 +814,7 @@ let allFrota     = [];
 let currentId    = null;
 let vehicleFilter = null;
 let currentUser  = null;
+let categoryFilter = null;
 let modalBs = null, modalNovaBs = null, modalBaixaBs = null, modalPerfilBs = null;
 let chartVeiculos = null, chartCategoria = null, chartMeses = null;
 
@@ -873,6 +885,8 @@ function buildCard(p){
   const more=p.veiculos_compativeis.length>3?`<span class="badge rounded-pill bg-secondary" style="font-size:.63rem">+${p.veiculos_compativeis.length-3}</span>`:'';
   const pb=p.pendente_analise?`<span class="badge bg-warning text-dark" style="font-size:.62rem"><i class="bi bi-exclamation-triangle me-1"></i>A verificar</span>`:'';
   const fb=p.veiculos_compativeis.length===0?`<span class="badge bg-danger" style="font-size:.62rem"><i class="bi bi-x-circle me-1"></i>Sem veículo</span>`:'';
+  const eb=(!p.pendente_analise&&p.quantidade>0&&p.quantidade<=2)?`<span class="badge bg-warning text-dark" style="font-size:.62rem"><i class="bi bi-exclamation-circle me-1"></i>Estoque baixo</span>`:'';
+  const zb=p.quantidade===0?`<span class="badge bg-danger" style="font-size:.62rem"><i class="bi bi-x-lg me-1"></i>Sem estoque</span>`:'';
   col.innerHTML=`
     <div class="card shadow-sm h-100 peca-card" onclick="openModal('${p.id}')">
       ${img}
@@ -884,7 +898,7 @@ function buildCard(p){
           <span class="badge rounded-pill" style="background:var(--brand-navy);color:#fff;font-size:.73rem">${p.quantidade} un.</span>
           <div class="d-flex gap-1 flex-wrap justify-content-end">${veics}${more}</div>
         </div>
-        ${(pb||fb)?`<div class="mt-1 d-flex gap-1">${pb}${fb}</div>`:''}
+        ${(pb||fb||eb||zb)?`<div class="mt-1 d-flex gap-1">${pb}${fb}${eb}${zb}</div>`:''}
       </div>
     </div>`;
   return col;
@@ -894,9 +908,11 @@ function buildCard(p){
 function filterPecas(){
   const q=(document.getElementById('searchInput').value||'').toLowerCase();
   const sort=document.getElementById('sortSelect').value;
+  const cat=(document.getElementById('catSelect')?.value||'');
   const filterPlates=vehicleFilter?allFrota.filter(v=>v.modelo===vehicleFilter).map(v=>v.placa.toUpperCase()):[];
   let list=allPecas.filter(p=>{
     if(vehicleFilter&&!p.veiculos_compativeis.some(vc=>filterPlates.some(pl=>vc.toUpperCase().includes(pl)))) return false;
+    if(cat&&p.categoria!==cat) return false;
     if(!q) return true;
     return p.nome.toLowerCase().includes(q)||p.descricao.toLowerCase().includes(q)||
            p.codigo.toLowerCase().includes(q)||p.fabricante.toLowerCase().includes(q);
@@ -948,7 +964,9 @@ function setView(v){
   if(v==='movimentacoes') loadTodasMovimentacoes();
   if(v==='dashboard')  loadDashboard();
   if(v==='perfis')     loadPerfis();
+  if(v!=='movimentacoes') _movsCache=null;
   if(v!=='todas'&&vehicleFilter){vehicleFilter=null;updateVehicleFilterUI();}
+  if(v==='todas'){const sel=document.getElementById('catSelect');if(sel&&!vehicleFilter){}}
 }
 
 function renderList(id,list){ const c=document.getElementById(id); c.innerHTML=''; list.forEach(p=>c.appendChild(buildCard(p))); }
@@ -1033,7 +1051,7 @@ function changeQty(delta){
   const p=allPecas.find(x=>x.id===currentId); if(!p) return;
   const nq=Math.max(0,p.quantidade+delta);
   fetch(`/api/pecas/${currentId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({quantidade:nq})})
-    .then(r=>r.json()).then(d=>{ if(d.success){p.quantidade=d.peca.quantidade;document.getElementById('mQty').textContent=p.quantidade;showToast(`Quantidade: ${p.quantidade} un.`,'success');} })
+    .then(r=>r.json()).then(d=>{ if(d.success){p.quantidade=d.peca.quantidade;document.getElementById('mQty').textContent=p.quantidade;showToast(`Quantidade: ${p.quantidade} un.`,'success');reloadStats();} })
     .catch(()=>showToast('Erro ao atualizar.','danger'));
 }
 
@@ -1358,14 +1376,32 @@ async function submitNovaPeca(){
 }
 
 /* ─── Movimentações ───────────────────────────────────────────────────── */
+function filterMovs(){
+  const q=(document.getElementById('movsSearch')?.value||'').toLowerCase();
+  if(!_movsCache) return;
+  const list = q ? _movsCache.filter(m=>
+    (m.peca_nome||'').toLowerCase().includes(q)||
+    (m.responsavel||'').toLowerCase().includes(q)||
+    (m.veiculo||'').toLowerCase().includes(q)
+  ) : _movsCache;
+  const tbody=document.getElementById('movsBody');
+  if(!tbody) return;
+  tbody.innerHTML=list.map(m=>{
+    const row=[m.id,m.data,m.peca_nome,m.peca_codigo||'',(m.responsavel||''),(m.veiculo||''),(m.quantidade),(m.observacoes||'')];
+    return '<tr>'+row.map(v=>'<td>'+v+'</td>').join('')+'</tr>';
+  }).join('');
+}
 function loadTodasMovimentacoes(){
   const wrap=document.getElementById('movsTableWrap');
   wrap.innerHTML='<div class="p-4 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>';
   fetch('/api/movimentacoes').then(r=>r.json()).then(d=>{
-    if(!d.movimentacoes||!d.movimentacoes.length){wrap.innerHTML='<div class="p-4 text-center text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Nenhuma movimentação.</div>';return;}
+    _movsCache=(d.movimentacoes||[]);
+    const q=(document.getElementById('movsSearch')?.value||'').toLowerCase().trim();
+    const list=q?_movsCache.filter(m=>(m.peca_nome||'').toLowerCase().includes(q)||(m.responsavel||'').toLowerCase().includes(q)||(m.veiculo||'').toLowerCase().includes(q)):_movsCache;
+    if(!list.length){wrap.innerHTML='<div class="p-4 text-center text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>'+(q?'Nenhum resultado.':'Nenhuma movimentação.')+'</div>';return;}
     wrap.innerHTML=`<div class="table-responsive"><table class="table table-hover table-sm mb-0">
       <thead class="table-dark"><tr><th>Data</th><th>Peça</th><th>Responsável</th><th>Veículo</th><th class="text-center">Qtd</th><th>Obs</th></tr></thead>
-      <tbody>${d.movimentacoes.map(m=>`<tr><td>${new Date(m.data+'T12:00:00').toLocaleDateString('pt-BR')}</td>
+      <tbody>${list.map(m=>`<tr><td>${new Date(m.data+'T12:00:00').toLocaleDateString('pt-BR')}</td>
         <td><a href="#" onclick="openModal('${m.peca_id}');return false" class="fw-semibold">${m.peca_nome}</a>${m.peca_codigo?`<div class="text-muted" style="font-size:.74rem">${m.peca_codigo}</div>`:''}</td>
         <td>${m.responsavel}</td><td>${m.veiculo||'—'}</td>
         <td class="text-center"><span class="badge" style="background:var(--brand-orange)">${m.quantidade}</span></td>
@@ -1472,8 +1508,9 @@ function buildSidebarCats(cats){
 }
 function filterByCategoria(cat){
   vehicleFilter=null; updateVehicleFilterUI();
+  const sel=document.getElementById('catSelect'); if(sel) sel.value=cat;
+  document.getElementById('searchInput').value='';
   setView('todas');
-  document.getElementById('searchInput').value=cat; filterPecas();
 }
 
 /* ─── Stats reload ────────────────────────────────────────────────────── */
@@ -1584,6 +1621,8 @@ async function init(){
   document.getElementById('topbarInfo').textContent=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   buildSidebarFrota(allFrota);
   buildSidebarCats(cd);
+  const _cs=document.getElementById('catSelect');
+  if(_cs&&_cs.options.length<=1){cd.forEach(cat=>{const o=document.createElement('option');o.value=cat.categoria;o.textContent=cat.categoria;_cs.appendChild(o);});}
   restoreSections();
   setView('dashboard');
 }

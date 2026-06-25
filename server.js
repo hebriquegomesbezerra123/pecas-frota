@@ -52,7 +52,12 @@ function loadCatalog() {
   return JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf-8'));
 }
 function saveCatalog(catalog) {
-  fs.writeFileSync(CATALOG_PATH, JSON.stringify(catalog, null, 2), 'utf-8');
+  if (fs.existsSync(CATALOG_PATH)) {
+    try { fs.copyFileSync(CATALOG_PATH, CATALOG_PATH + '.bak'); } catch(_) {}
+  }
+  const _tmp = CATALOG_PATH + '.tmp';
+  fs.writeFileSync(_tmp, JSON.stringify(catalog, null, 2), 'utf-8');
+  fs.renameSync(_tmp, CATALOG_PATH);
 }
 
 function httpsGet(url) {
@@ -169,7 +174,7 @@ function seedPerfis() {
   if (!catalog.perfis.find(p => p.id === 'prf001')) {
     catalog.perfis.unshift({
       id: 'prf001', nome: 'Administrador', papel: 'admin',
-      senha: PECAS_SENHA, ativo: true, criado_em: new Date().toISOString()
+      senha: hashPassword(PECAS_SENHA), ativo: true, criado_em: new Date().toISOString()
     });
     saveCatalog(catalog);
     console.log('✅ Perfil administrador (re)criado com a senha padrão (PECAS_SENHA)');
@@ -178,6 +183,41 @@ function seedPerfis() {
 function getCookie(req, nome) {
   const m = (req.headers.cookie || '').match(new RegExp('(?:^|; )' + nome + '=([^;]*)'));
   return m ? decodeURIComponent(m[1]) : null;
+}
+
+// Rate limiting (login)
+const _loginAttempts = new Map();
+function checkRateLimit(ip) {
+  const now = Date.now(), win = 5 * 60 * 1000, max = 10;
+  const e = _loginAttempts.get(ip);
+  if (!e || now - e.firstAt > win) { _loginAttempts.set(ip, { count: 1, firstAt: now }); return true; }
+  if (e.count >= max) return false;
+  e.count++; return true;
+}
+function resetRateLimit(ip) { _loginAttempts.delete(ip); }
+
+// Hash de senhas (SHA-256 + salt)
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.createHmac('sha256', salt).update(password).digest('hex');
+  return 'sha256:' + salt + ':' + hash;
+}
+function verifyPassword(password, stored) {
+  if ((stored || '').startsWith('sha256:')) {
+    const parts = stored.split(':');
+    if (parts.length < 3) return false;
+    const salt = parts[1], hash = parts[2];
+    const expected = crypto.createHmac('sha256', salt).update(password).digest('hex');
+    try {
+      if (hash.length !== expected.length) return false;
+      return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expected));
+    } catch (_) { return false; }
+  }
+  // legado plain-text
+  try {
+    const pb = Buffer.from(password || ''), sb = Buffer.from(stored || '');
+    return pb.length === sb.length && crypto.timingSafeEqual(pb, sb);
+  } catch (_) { return false; }
 }
 
 // ─── Kill-switch: o portal pode desligar este sistema ──────────────────────────
@@ -474,7 +514,7 @@ app.post('/api/perfis', ensureAdmin, (req, res) => {
   }, 0);
   const perfil = {
     id: 'prf' + String(maxNum + 1).padStart(3, '0'),
-    nome, papel, senha, ativo: true, criado_em: new Date().toISOString()
+    nome, papel, senha: hashPassword(senha), ativo: true, criado_em: new Date().toISOString()
   };
   catalog.perfis.push(perfil);
   saveCatalog(catalog);
@@ -493,7 +533,7 @@ app.put('/api/perfis/:id', ensureAdmin, (req, res) => {
     catalog.perfis[idx].nome = nome;
   }
   if (papel && ['admin', 'operador'].includes(papel)) catalog.perfis[idx].papel = papel;
-  if (senha) catalog.perfis[idx].senha = senha;
+  if (senha) catalog.perfis[idx].senha = hashPassword(senha);
   if (ativo !== undefined) catalog.perfis[idx].ativo = !!ativo;
   saveCatalog(catalog);
   const p = catalog.perfis[idx];
@@ -518,62 +558,63 @@ app.delete('/api/perfis/:id', ensureAdmin, (req, res) => {
 });
 
 // ─── ANÁLISE IA (GEMINI) ─────────────────────────────────────────────────
-app.post('/api/analisar-foto', upload.single('foto'), async (req, res) => {
+app.﻿post('/api/analisar-foto', upload.single('foto'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhuma foto enviada' });
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    fs.unlinkSync(req.file.path);
-    return res.status(503).json({ error: 'GEMINI_API_KEY não configurada no servidor' });
+    try { fs.unlinkSync(req.file.path); } catch(_) {}
+    return res.status(503).json({ error: 'GEMINI_API_KEY nao configurada no servidor' });
   }
   try {
     const catalog = loadCatalog();
-    const modelos = [...new Set(catalog.frota.map(v => v.modelo))].sort().join(', ');
+    const cats = [...new Set((catalog.pecas||[]).map(p=>p.categoria).filter(Boolean))].sort().join(', ') || 'Filtros, Freios, Motor, Embreagem, Suspensao, Carroceria, Eletrica';
     const base64 = fs.readFileSync(req.file.path).toString('base64');
     const mime   = req.file.mimetype || 'image/jpeg';
-    fs.unlinkSync(req.file.path);
+    try { fs.unlinkSync(req.file.path); } catch(_) {}
 
-    const prompt = `Analise a imagem desta peça automotiva e retorne SOMENTE um objeto JSON puro, sem nenhum texto antes ou depois, sem blocos de código markdown.
-
-Formato exato (substitua os valores):
-{"nome":"nome técnico da peça","codigo":"referência visível ou vazio","fabricante":"marca ou Não identificado","categoria":"uma das categorias abaixo","descricao":"descrição técnica em 1-2 frases","preco_estimado":0,"veiculos_sugeridos":["modelo1","modelo2"]}
-
-Categorias válidas (use exatamente uma): Filtros | Freios | Motor | Embreagem | Suspensão e Fixação | Carroceria | Elétrica e Eletrônica
-
-Frota disponível para veiculos_sugeridos: ${modelos}
-
-Responda APENAS com o JSON. Nenhum outro texto.`;
+    const linhas = [
+      'Voce e um especialista em identificacao de pecas mecanicas, industriais, agricolas e automotivas.',
+      'Analise CUIDADOSAMENTE esta imagem e identifique a peca.',
+      '',
+      'REGRAS OBRIGATORIAS:',
+      '1. Leia TODO texto visivel na embalagem, rotulo ou na propria peca (codigo, marca, referencia)',
+      '2. NAO assuma que e peca de carro. Pode ser de moto, caminhao, trator, maquina industrial, equipamento agricola etc.',
+      '3. Identifique pelo que REALMENTE ve na imagem, nao por suposicao',
+      '4. Se houver codigo ou referencia visivel, copie EXATAMENTE como aparece',
+      '5. Se nao tiver certeza, deixe o campo como string vazia',
+      '',
+      'Categorias disponiveis: ' + cats,
+      '',
+      'Retorne SOMENTE JSON puro sem markdown:',
+      '{"nome":"nome tecnico da peca","codigo":"codigo visivel ou vazio","fabricante":"marca visivel ou Nao identificado","categoria":"categoria adequada","descricao":"descreva o que voce ve na imagem em 1-2 frases"}'
+    ];
+    const prompt = linhas.join('\n');
 
     const result = await httpsPost(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${key}`,
+      'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=' + key,
       {
         contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+        generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
       }
     );
 
-    // Verifica erro na API do Gemini
-    if (result?.error) return res.status(502).json({ error: `Gemini API: ${result.error.message || JSON.stringify(result.error)}` });
+    if (result && result.error) return res.status(502).json({ error: 'Gemini API: ' + (result.error.message || JSON.stringify(result.error)) });
 
-    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const finishReason = result?.candidates?.[0]?.finishReason || '';
-    if (!text) return res.status(422).json({ error: `Gemini não gerou texto (finishReason: ${finishReason})`, result: JSON.stringify(result).substring(0, 400) });
+    const text = ((((result||{}).candidates||[])[0]||{}).content||{}).parts && result.candidates[0].content.parts[0].text || '';
+    if (!text) return res.status(422).json({ error: 'Gemini nao gerou resposta' });
 
-    // Extrai bloco JSON mesmo que venha dentro de markdown ou com texto ao redor
     let parsed;
-    const attempts = [
-      () => JSON.parse(text.trim()),
-      () => JSON.parse(text.replace(/```json\s*/gi, '').replace(/```/g, '').trim()),
-      () => { const m = text.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); throw new Error('no match'); }
-    ];
-    for (const fn of attempts) { try { parsed = fn(); break; } catch(e) {} }
-    if (!parsed) return res.status(422).json({ error: 'IA não retornou JSON válido', raw: text.substring(0, 500) });
+    try { parsed = JSON.parse(text.trim()); } catch(_) {}
+    if (!parsed) try { parsed = JSON.parse(text.replace(/[\s\S]*?({[\s\S]*})[\s\S]*/,'')); } catch(_) {}
+    if (!parsed) { const m = text.match(/{[\s\S]*}/); if(m) try { parsed = JSON.parse(m[0]); } catch(_) {} }
+    if (!parsed) return res.status(422).json({ error: 'IA nao retornou JSON valido', raw: text.substring(0,500) });
 
     res.json({ success: true, dados: parsed });
   } catch(e) {
     try { if (req.file) fs.unlinkSync(req.file.path); } catch(_) {}
     res.status(500).json({ error: e.message });
   }
-});
+})
 
 // ─── PREÇO MERCADO LIVRE ──────────────────────────────────────────────────────
 app.get('/api/preco/:id', async (req, res) => {
@@ -633,7 +674,7 @@ app.get('/logout', (req, res) => {
   res.redirect('/login');
 });
 
-function _paginaLogin(erro) {
+function _paginaLogin(erro, msg) {
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login — Bolsão Peças</title>
@@ -659,7 +700,7 @@ function _paginaLogin(erro) {
     <div class="icon">🔧</div>
     <h1>Bolsão Peças</h1>
     <p class="sub">Catálogo de Peças Veiculares</p>
-    ${erro ? '<div class="erro">Senha incorreta.</div>' : ''}
+    ${erro ? `<div class="erro">${msg || 'Senha incorreta.'}</div>` : ''}
     <label>Nome de usuário</label>
     <input type="text" name="nome" autofocus required autocomplete="username" placeholder="Seu nome">
     <label style="margin-top:.75rem">Senha</label>
@@ -675,6 +716,8 @@ app.get('/login', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
+  const ip = ((req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0]).trim();
+  if (!checkRateLimit(ip)) return res.status(429).send(_paginaLogin(true, 'Muitas tentativas. Aguarde 5 minutos.'));
   const { nome, senha } = req.body;
   const catalog = loadCatalog();
   const perfis  = catalog.perfis || [];
@@ -682,6 +725,7 @@ app.post('/login', (req, res) => {
   // Sem perfis cadastrados → fallback senha única (legado)
   if (!perfis.length) {
     if ((senha || '') === PECAS_SENHA) {
+      resetRateLimit(ip);
       res.setHeader('Set-Cookie',
         `pecas_auth=${gerarAuthCookie('_legacy_admin')}; HttpOnly; Path=/; Max-Age=28800; SameSite=Lax`);
       return res.redirect('/');
@@ -691,16 +735,33 @@ app.post('/login', (req, res) => {
 
   const perfil = perfis.find(p =>
     p.nome.toLowerCase() === (nome || '').trim().toLowerCase() &&
-    p.senha === senha && p.ativo
+    verifyPassword(senha, p.senha) && p.ativo
   );
   if (!perfil) return res.status(401).send(_paginaLogin(true));
-
+  if (!(perfil.senha || '').startsWith('sha256:')) {
+    const cL = loadCatalog();
+    const pL = cL.perfis.find(x => x.id === perfil.id);
+    if (pL) { pL.senha = hashPassword(senha); saveCatalog(cL); }
+  }
+  resetRateLimit(ip);
   res.setHeader('Set-Cookie',
     `pecas_auth=${gerarAuthCookie(perfil.id)}; HttpOnly; Path=/; Max-Age=28800; SameSite=Lax`);
   res.redirect('/');
 });
 
 // ─── FALLBACK ─────────────────────────────────────────────────────────────────
+// Export CSV movimentações
+app.get('/api/movimentacoes/export', (req, res) => {
+  const catalog = loadCatalog();
+  const movs = (catalog.movimentacoes || []).slice().reverse();
+  const esc = s => '"' + String(s || '').replace(/"/g, '""') + '"';
+  const hdr = ['ID','Data','Peca','Codigo','Responsavel','Veiculo','Quantidade','Observacoes'].join(',');
+  const rows = movs.map(m => [m.id, m.data, esc(m.peca_nome), esc(m.peca_codigo), esc(m.responsavel), esc(m.veiculo), m.quantidade, esc(m.observacoes)].join(','));
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="movimentacoes_' + new Date().toISOString().split('T')[0] + '.csv"');
+  res.send('\ufeff' + [hdr, ...rows].join('\r\n'));
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

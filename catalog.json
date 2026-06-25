@@ -1113,5 +1113,14 @@
     }
   ],
   "movimentacoes": [],
-  "perfis": []
+  "perfis": [
+    {
+      "id": "prf001",
+      "nome": "Administrador",
+      "papel": "admin",
+      "senha": "sha256:07f43326991dba986b83761773c08dd1:7e3c0b0a0201c69c107fc631ef952aea650e2c685d2e2d17d002d0cbeb1abba9",
+      "ativo": true,
+      "criado_em": "2026-06-24T12:54:31.930Z"
+    }
+  ]
 }
