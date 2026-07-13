@@ -159,13 +159,60 @@ function getPerfilFromReq(req) {
                  : { id: '_admin', nome: 'Administrador', papel: 'admin' };
   }
   const p = perfis.find(p => p.id === profileId);
-  return (p && p.ativo) ? { id: p.id, nome: p.nome, papel: p.papel } : null;
+  return (p && p.ativo) ? { id: p.id, nome: p.nome, papel: normalizarPapel(p.papel) } : null;
 }
 function ensureAdmin(req, res, next) {
   const p = getPerfilFromReq(req);
   if (!p || p.papel !== 'admin')
     return res.status(403).json({ error: 'Permissão negada. Apenas administradores.' });
   next();
+}
+// Papéis reconhecidos. 'operador' é tratado como 'operacao' (retrocompat).
+const PAPEIS_VALIDOS = ['admin', 'operacao', 'viewer'];
+function normalizarPapel(papel) {
+  if (papel === 'operador') return 'operacao';
+  return papel;
+}
+// operacao OU admin podem registrar solicitações (baixa/entrada)
+function ensureOperacao(req, res, next) {
+  const p = getPerfilFromReq(req);
+  const papel = p && normalizarPapel(p.papel);
+  if (!p || (papel !== 'admin' && papel !== 'operacao'))
+    return res.status(403).json({ error: 'Permissão negada. Apenas operação ou administrador.' });
+  next();
+}
+
+// ─── Fila serializada de escrita de estoque ─────────────────────────────────────
+// Toda alteração de saldo passa por aqui, UMA de cada vez. Garante que duas
+// aprovações simultâneas não gerem saldo negativo nem gravação perdida no JSON.
+let _writeChain = Promise.resolve();
+function serializarEscrita(fn) {
+  const run = _writeChain.then(fn, fn);
+  // mantém a corrente viva mesmo se fn rejeitar
+  _writeChain = run.then(() => {}, () => {});
+  return run;
+}
+// Aplica uma movimentação de estoque (entrada soma, saida subtrai) e registra o
+// histórico imutável em movimentacoes_estoque. NÃO valida permissão (quem chama valida).
+function aplicarMovimentacao(catalog, { peca_id, tipo, quantidade, solicitacao_id, usuario_id }) {
+  const idx = catalog.pecas.findIndex(p => p.id === peca_id);
+  if (idx === -1) throw new Error('Peça não encontrada');
+  const peca = catalog.pecas[idx];
+  const saldoAnterior = peca.quantidade || 0;
+  const delta = tipo === 'entrada' ? quantidade : -quantidade;
+  const saldoNovo = saldoAnterior + delta;
+  if (saldoNovo < 0) throw new Error(`Estoque insuficiente. Disponível: ${saldoAnterior}`);
+  peca.quantidade = saldoNovo;
+  if (!catalog.movimentacoes_estoque) catalog.movimentacoes_estoque = [];
+  const mov = {
+    id: 'ME' + String(catalog.movimentacoes_estoque.length + 1).padStart(4, '0'),
+    peca_id, peca_nome: peca.nome, tipo, quantidade,
+    saldo_anterior: saldoAnterior, saldo_novo: saldoNovo,
+    solicitacao_id: solicitacao_id || null, usuario_id: usuario_id || null,
+    criado_em: new Date().toISOString()
+  };
+  catalog.movimentacoes_estoque.push(mov);
+  return { mov, saldoNovo };
 }
 function seedPerfis() {
   const catalog = loadCatalog();
@@ -335,7 +382,13 @@ app.put('/api/pecas/:id', (req, res) => {
   const catalog = loadCatalog();
   const idx = catalog.pecas.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Peça não encontrada' });
-  const allowed = ['quantidade','observacoes','pendente_analise','nome','descricao','codigo','fabricante','categoria','veiculos_compativeis','preco_referencia'];
+  const perfil = getPerfilFromReq(req);
+  const isAdmin = perfil && perfil.papel === 'admin';
+  // 'quantidade' e 'estoque_minimo' são estoque: só admin altera direto.
+  let allowed = ['observacoes','pendente_analise','nome','descricao','codigo','fabricante','categoria','veiculos_compativeis','preco_referencia','estoque_minimo','foto_url','codigo_fornecedor'];
+  if (isAdmin) allowed = allowed.concat(['quantidade']);
+  if (req.body.quantidade !== undefined && !isAdmin)
+    return res.status(403).json({ error: 'Alteração de estoque exige aprovação do administrador.' });
   allowed.forEach(f => { if (req.body[f] !== undefined) catalog.pecas[idx][f] = req.body[f]; });
   saveCatalog(catalog);
   res.json({ success: true, peca: catalog.pecas[idx] });
@@ -451,7 +504,7 @@ app.get('/api/movimentacoes/peca/:pecaId', (req, res) => {
   res.json({ total: movs.length, movimentacoes: movs });
 });
 
-app.post('/api/movimentacoes', (req, res) => {
+app.post('/api/movimentacoes', ensureAdmin, (req, res) => {
   const catalog = loadCatalog();
   if (!catalog.movimentacoes) catalog.movimentacoes = [];
   const { peca_id, responsavel, veiculo, quantidade, data, observacoes } = req.body;
@@ -504,7 +557,8 @@ app.get('/api/perfis', ensureAdmin, (req, res) => {
 app.post('/api/perfis', ensureAdmin, (req, res) => {
   const { nome, papel, senha } = req.body;
   if (!nome || !papel || !senha) return res.status(400).json({ error: 'nome, papel e senha são obrigatórios' });
-  if (!['admin', 'operador'].includes(papel)) return res.status(400).json({ error: 'papel inválido' });
+  const papelNorm = normalizarPapel(papel);
+  if (!PAPEIS_VALIDOS.includes(papelNorm)) return res.status(400).json({ error: 'papel inválido' });
   const catalog = loadCatalog();
   if (!catalog.perfis) catalog.perfis = [];
   if (catalog.perfis.some(p => p.nome.toLowerCase() === nome.toLowerCase()))
@@ -514,7 +568,7 @@ app.post('/api/perfis', ensureAdmin, (req, res) => {
   }, 0);
   const perfil = {
     id: 'prf' + String(maxNum + 1).padStart(3, '0'),
-    nome, papel, senha: hashPassword(senha), ativo: true, criado_em: new Date().toISOString()
+    nome, papel: papelNorm, senha: hashPassword(senha), ativo: true, criado_em: new Date().toISOString()
   };
   catalog.perfis.push(perfil);
   saveCatalog(catalog);
@@ -532,7 +586,7 @@ app.put('/api/perfis/:id', ensureAdmin, (req, res) => {
       return res.status(409).json({ error: 'Já existe um perfil com este nome' });
     catalog.perfis[idx].nome = nome;
   }
-  if (papel && ['admin', 'operador'].includes(papel)) catalog.perfis[idx].papel = papel;
+  if (papel && PAPEIS_VALIDOS.includes(normalizarPapel(papel))) catalog.perfis[idx].papel = normalizarPapel(papel);
   if (senha) catalog.perfis[idx].senha = hashPassword(senha);
   if (ativo !== undefined) catalog.perfis[idx].ativo = !!ativo;
   saveCatalog(catalog);
@@ -761,6 +815,150 @@ app.get('/api/movimentacoes/export', (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="movimentacoes_' + new Date().toISOString().split('T')[0] + '.csv"');
   res.send('\ufeff' + [hdr, ...rows].join('\r\n'));
 });
+
+// ─── SOLICITAÇÕES (fila de autorização) ─────────────────────────────────────────
+// Toda baixa/entrada nasce aqui como 'pendente'. O estoque NÃO muda até o admin aprovar.
+function nextSolId(catalog) {
+  const arr = catalog.solicitacoes || [];
+  const max = arr.reduce((m, s) => { const n = parseInt((s.id || '').replace('SOL', '')); return n > m ? n : m; }, 0);
+  return 'SOL' + String(max + 1).padStart(4, '0');
+}
+
+// Cria solicitação (operacao ou admin). Não move estoque.
+app.post('/api/solicitacoes', ensureOperacao, (req, res) => {
+  const perfil = getPerfilFromReq(req);
+  const { tipo, peca_id, placa, quantidade, observacao, fornecedor, custo_unitario, nota_fiscal } = req.body;
+  if (!['baixa', 'entrada'].includes(tipo)) return res.status(400).json({ error: "tipo deve ser 'baixa' ou 'entrada'" });
+  const qty = parseInt(quantidade);
+  if (!Number.isInteger(qty) || qty <= 0) return res.status(400).json({ error: 'quantidade deve ser inteiro positivo' });
+
+  const catalog = loadCatalog();
+  const peca = (catalog.pecas || []).find(p => p.id === peca_id);
+  if (!peca) return res.status(404).json({ error: 'Peça não encontrada' });
+
+  if (tipo === 'baixa') {
+    if (!placa) return res.status(400).json({ error: 'Veículo (placa) é obrigatório na baixa' });
+    const veiculo = (catalog.frota || []).find(v => v.placa.toUpperCase() === String(placa).toUpperCase());
+    if (!veiculo) return res.status(400).json({ error: 'Veículo não cadastrado na frota' });
+    // valida contra o estoque atual já na criação (dá feedback cedo; revalidado na aprovação)
+    if ((peca.quantidade || 0) < qty)
+      return res.status(400).json({ error: `Estoque insuficiente. Disponível: ${peca.quantidade || 0}` });
+  }
+
+  if (!catalog.solicitacoes) catalog.solicitacoes = [];
+  const sol = {
+    id: nextSolId(catalog), tipo, status: 'pendente',
+    peca_id, peca_nome: peca.nome, peca_codigo: peca.codigo || '',
+    placa: tipo === 'baixa' ? String(placa).toUpperCase() : null,
+    quantidade_solicitada: qty, quantidade_aprovada: null,
+    observacao: observacao || '',
+    fornecedor: tipo === 'entrada' ? (fornecedor || '') : null,
+    custo_unitario: tipo === 'entrada' && custo_unitario != null ? Number(custo_unitario) : null,
+    nota_fiscal: tipo === 'entrada' ? (nota_fiscal || '') : null,
+    solicitante_id: perfil.id, solicitante_nome: perfil.nome,
+    criado_em: new Date().toISOString(),          // SEMPRE do servidor
+    aprovado_por: null, aprovado_por_nome: null, aprovado_em: null, motivo_recusa: null
+  };
+  catalog.solicitacoes.push(sol);
+  saveCatalog(catalog);
+  registrarAuditoria(catalog, perfil, 'criar_solicitacao', 'solicitacao', sol.id, null, sol, req);
+  res.json({ success: true, solicitacao: sol });
+});
+
+// Lista solicitações. Admin vê tudo; operacao/viewer veem as próprias.
+app.get('/api/solicitacoes', (req, res) => {
+  const perfil = getPerfilFromReq(req);
+  if (!perfil) return res.status(401).json({ error: 'não autenticado' });
+  const catalog = loadCatalog();
+  let arr = (catalog.solicitacoes || []).slice().reverse();
+  if (perfil.papel !== 'admin') arr = arr.filter(s => s.solicitante_id === perfil.id);
+  const { status, tipo } = req.query;
+  if (status) arr = arr.filter(s => s.status === status);
+  if (tipo)   arr = arr.filter(s => s.tipo === tipo);
+  res.json({ total: arr.length, solicitacoes: arr });
+});
+
+// Contador de pendências (badge)
+app.get('/api/solicitacoes/pendentes/count', ensureAdmin, (req, res) => {
+  const catalog = loadCatalog();
+  res.json({ count: (catalog.solicitacoes || []).filter(s => s.status === 'pendente').length });
+});
+
+// APROVAR — único ponto onde o estoque se move. Serializado (sem saldo negativo).
+app.post('/api/solicitacoes/:id/aprovar', ensureAdmin, (req, res) => {
+  const perfil = getPerfilFromReq(req);
+  serializarEscrita(() => {
+    const catalog = loadCatalog();
+    const sol = (catalog.solicitacoes || []).find(s => s.id === req.params.id);
+    if (!sol) { res.status(404).json({ error: 'Solicitação não encontrada' }); return; }
+    if (sol.status !== 'pendente') { res.status(409).json({ error: `Solicitação já ${sol.status}` }); return; }
+    // Permite ajustar a quantidade na aprovação (ex.: pediram 3, saíram 2)
+    let qty = sol.quantidade_solicitada;
+    if (req.body.quantidade_aprovada != null) {
+      qty = parseInt(req.body.quantidade_aprovada);
+      if (!Number.isInteger(qty) || qty <= 0) { res.status(400).json({ error: 'quantidade_aprovada inválida' }); return; }
+    }
+    const antes = JSON.parse(JSON.stringify(sol));
+    try {
+      const { saldoNovo } = aplicarMovimentacao(catalog, {
+        peca_id: sol.peca_id,
+        tipo: sol.tipo === 'entrada' ? 'entrada' : 'saida',
+        quantidade: qty, solicitacao_id: sol.id, usuario_id: perfil.id
+      });
+      sol.status = 'aprovada';
+      sol.quantidade_aprovada = qty;
+      sol.aprovado_por = perfil.id; sol.aprovado_por_nome = perfil.nome;
+      sol.aprovado_em = new Date().toISOString();
+      saveCatalog(catalog);
+      registrarAuditoria(catalog, perfil, 'aprovar_solicitacao', 'solicitacao', sol.id, antes, sol, req);
+      res.json({ success: true, solicitacao: sol, novo_saldo: saldoNovo });
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  }).catch(e => { if (!res.headersSent) res.status(500).json({ error: e.message }); });
+});
+
+// RECUSAR — não move estoque. Motivo obrigatório.
+app.post('/api/solicitacoes/:id/recusar', ensureAdmin, (req, res) => {
+  const perfil = getPerfilFromReq(req);
+  const motivo = (req.body.motivo || '').trim();
+  if (!motivo) return res.status(400).json({ error: 'motivo é obrigatório para recusar' });
+  const catalog = loadCatalog();
+  const sol = (catalog.solicitacoes || []).find(s => s.id === req.params.id);
+  if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' });
+  if (sol.status !== 'pendente') return res.status(409).json({ error: `Solicitação já ${sol.status}` });
+  const antes = JSON.parse(JSON.stringify(sol));
+  sol.status = 'recusada';
+  sol.motivo_recusa = motivo;
+  sol.aprovado_por = perfil.id; sol.aprovado_por_nome = perfil.nome;
+  sol.aprovado_em = new Date().toISOString();
+  saveCatalog(catalog);
+  registrarAuditoria(catalog, perfil, 'recusar_solicitacao', 'solicitacao', sol.id, antes, sol, req);
+  res.json({ success: true, solicitacao: sol });
+});
+
+// ─── AUDITORIA ──────────────────────────────────────────────────────────────────
+function registrarAuditoria(catalog, perfil, acao, entidade, entidade_id, antes, depois, req) {
+  try {
+    if (!catalog.auditoria) catalog.auditoria = [];
+    catalog.auditoria.push({
+      id: 'AUD' + String(catalog.auditoria.length + 1).padStart(5, '0'),
+      usuario_id: perfil ? perfil.id : null, usuario_nome: perfil ? perfil.nome : null,
+      acao, entidade, entidade_id, dados_antes: antes, dados_depois: depois,
+      ip: req ? ((req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0]).trim() : null,
+      criado_em: new Date().toISOString()
+    });
+    saveCatalog(catalog);
+  } catch (_) { /* auditoria nunca derruba a operação principal */ }
+}
+app.get('/api/auditoria', ensureAdmin, (req, res) => {
+  const catalog = loadCatalog();
+  res.json({ total: (catalog.auditoria || []).length, auditoria: (catalog.auditoria || []).slice().reverse().slice(0, 500) });
+});
+
+// (A antiga tela /admin foi integrada ao sistema principal — aba "Autorizações".)
+// Redireciona qualquer link antigo para a home.
+app.get('/admin', (req, res) => res.redirect('/'));
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

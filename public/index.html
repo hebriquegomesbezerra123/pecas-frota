@@ -194,6 +194,13 @@
           <span class="sidebar-text ms-2">Movimentações</span>
         </a>
       </li>
+      <li id="navAutorizacoesItem" style="display:none">
+        <a class="nav-link" id="navAutorizacoes" onclick="setView('autorizacoes')">
+          <i class="bi bi-check2-square nav-icon"></i>
+          <span class="sidebar-text ms-2">Autorizações</span>
+          <span class="badge ms-auto sidebar-text" id="badgePendAutoriz" style="background:var(--brand-orange);display:none">0</span>
+        </a>
+      </li>
       <li id="navPerfisItem" style="display:none">
         <a class="nav-link" id="navPerfis" onclick="setView('perfis')">
           <i class="bi bi-people nav-icon"></i>
@@ -249,7 +256,7 @@
         <button class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex align-items-center gap-1" onclick="gerarRelatorio()">
           <i class="bi bi-printer"></i><span class="d-none d-md-inline">Relatório</span>
         </button>
-        <button class="btn btn-sm fw-semibold" style="background:var(--brand-orange);color:#fff" onclick="openNovaPecaModal()">
+        <button class="btn btn-sm fw-semibold" id="btnNovaPeca" style="background:var(--brand-orange);color:#fff" onclick="openNovaPecaModal()">
           <i class="bi bi-plus-lg me-1"></i>Nova Peça
         </button>
         <span class="text-muted small d-none d-md-block" id="topbarInfo"></span>
@@ -489,6 +496,24 @@
         <div class="card shadow-sm"><div class="card-body p-0" id="movsTableWrap"></div></div>
       </div>
 
+      <!-- ── AUTORIZAÇÕES ── -->
+      <div id="viewAutorizacoes" style="display:none">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <h4 class="fw-bold mb-0"><i class="bi bi-check2-square me-2 text-primary"></i>Autorizações de Estoque</h4>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm fw-semibold" style="background:var(--brand-navy);color:#fff" onclick="openQrModal()"><i class="bi bi-qr-code me-1"></i>QR de Acesso</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadAutorizacoes()"><i class="bi bi-arrow-clockwise me-1"></i>Atualizar</button>
+          </div>
+        </div>
+        <div class="alert alert-info border-0 shadow-sm small mb-3"><i class="bi bi-info-circle me-1"></i>Nada entra ou sai do estoque sem a sua autorização. Baixas e entradas registradas pela equipe aparecem aqui.</div>
+        <ul class="nav nav-pills mb-3 gap-1" id="autorizTabs">
+          <li class="nav-item"><a class="nav-link active" data-af="pendente" onclick="setAutorizFiltro('pendente',this)">Pendentes <span class="badge bg-light text-dark ms-1" id="cntPend">0</span></a></li>
+          <li class="nav-item"><a class="nav-link" data-af="aprovada" onclick="setAutorizFiltro('aprovada',this)">Autorizadas</a></li>
+          <li class="nav-item"><a class="nav-link" data-af="recusada" onclick="setAutorizFiltro('recusada',this)">Recusadas</a></li>
+        </ul>
+        <div id="autorizList" class="row g-3"></div>
+      </div>
+
       <!-- ── PERFIS ── -->
       <div id="viewPerfis" style="display:none">
         <div class="d-flex align-items-center justify-content-between mb-4">
@@ -527,7 +552,7 @@
             </div>
             <div class="thumb-strip" id="mThumbs"></div>
             <!-- Upload foto na peça existente -->
-            <div class="mt-2">
+            <div class="mt-2" id="mFotoUploadWrap">
               <label class="upload-zone w-100" onclick="document.getElementById('editFotoInput').click()">
                 <i class="bi bi-camera text-muted me-1"></i>
                 <span class="text-muted small">Adicionar fotos</span>
@@ -559,9 +584,9 @@
             <div class="d-flex align-items-center gap-3">
               <div class="fw-semibold small text-muted text-uppercase" style="letter-spacing:.06em">Quantidade</div>
               <div class="qty-control">
-                <button class="qty-btn" onclick="changeQty(-1)">−</button>
+                <button class="qty-btn qtyAdmin" onclick="changeQty(-1)">−</button>
                 <span class="qty-display" id="mQty">0</span>
-                <button class="qty-btn" onclick="changeQty(1)">+</button>
+                <button class="qty-btn qtyAdmin" onclick="changeQty(1)">+</button>
               </div>
               <span class="text-muted small">unidades</span>
             </div>
@@ -569,7 +594,7 @@
         </div>
 
         <!-- Preço Referência -->
-        <div class="mt-3 pt-3 border-top">
+        <div class="mt-3 pt-3 border-top" id="mPrecoWrap">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <span class="fw-semibold small text-muted text-uppercase" style="letter-spacing:.06em">
               <i class="bi bi-tags me-1" style="color:var(--brand-cyan)"></i>Preço Referência
@@ -601,15 +626,18 @@
           <div id="mPendenteBadge" style="display:none">
             <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Pendente de Análise</span>
           </div>
-          <button class="btn btn-sm fw-semibold" style="background:var(--brand-orange);color:#fff" onclick="openBaixaModal()">
+          <button class="btn btn-sm fw-semibold" id="btnDarBaixa" style="background:var(--brand-orange);color:#fff" onclick="openBaixaModal()">
             <i class="bi bi-box-arrow-up me-1"></i>Dar Baixa
+          </button>
+          <button class="btn btn-sm fw-semibold" id="btnEntrada" style="background:var(--brand-cyan);color:#fff" onclick="openEntradaModal()">
+            <i class="bi bi-box-arrow-in-down me-1"></i>Entrada
           </button>
         </div>
         <div class="d-flex gap-2">
           <button class="btn btn-sm btn-outline-danger" id="btnExcluirPeca" style="display:none" onclick="excluirPeca()">
             <i class="bi bi-trash me-1"></i>Excluir
           </button>
-          <button class="btn btn-sm btn-outline-primary" onclick="openEditModal()">
+          <button class="btn btn-sm btn-outline-primary" id="btnEditarPeca" onclick="openEditModal()">
             <i class="bi bi-pencil me-1"></i>Editar
           </button>
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
@@ -754,6 +782,76 @@
   </div>
 </div>
 
+<!-- ── Modal: QR Code de Acesso ────────────────────────────────────────────── -->
+<div class="modal fade" id="modalQr" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--brand-navy);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-qr-code me-2"></i>QR Code de Acesso — Equipe</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="text-muted small">O funcionário escaneia com o celular e entra com o login e senha que você criou. Imprima e cole no almoxarifado.</p>
+        <div id="qrArea" class="d-flex justify-content-center my-3"></div>
+        <div class="small text-muted" id="qrUrl"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        <button class="btn btn-primary" onclick="imprimirQr()"><i class="bi bi-printer me-1"></i>Imprimir (A4)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Entrada de Peça ──────────────────────────────────────────────── -->
+<div class="modal fade" id="modalEntrada" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--brand-cyan);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-box-arrow-in-down me-2"></i>Registrar Entrada</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert border mb-3 small" id="entradaPecaInfo" style="background:#e9fbff;border-color:#00BFDF!important"></div>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Responsável</label>
+            <input type="text" class="form-control" id="enResponsavel" readonly style="background:#f1f3f9">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Quantidade *</label>
+            <input type="number" class="form-control" id="enQtd" min="1" value="1">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Fornecedor</label>
+            <input type="text" class="form-control" id="enFornecedor" placeholder="Ex: AutoPeças SP">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Nota Fiscal</label>
+            <input type="text" class="form-control" id="enNota" placeholder="Nº da NF (opcional)">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Custo unitário</label>
+            <div class="input-group"><span class="input-group-text">R$</span>
+              <input type="number" class="form-control" id="enCusto" min="0" step="0.01" placeholder="0,00"></div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Observações</label>
+            <textarea class="form-control" id="enObs" rows="2" placeholder="Ex: reposição de estoque..."></textarea>
+          </div>
+        </div>
+        <div class="small text-muted mt-2" id="entradaAviso"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn fw-semibold" style="background:var(--brand-cyan);color:#fff" onclick="submitEntrada()">
+          <i class="bi bi-check2-circle me-1"></i>Registrar Entrada
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Modal: Perfil ─────────────────────────────────────────────────────── -->
 <div class="modal fade" id="modalPerfil" tabindex="-1">
   <div class="modal-dialog">
@@ -771,7 +869,8 @@
           <div class="col-12">
             <label class="form-label">Nível de Acesso *</label>
             <select class="form-select" id="prfPapel">
-              <option value="operador">Operador — consulta, cadastro e baixa</option>
+              <option value="operacao">Operação — registra baixa/entrada (vai p/ autorização)</option>
+              <option value="viewer">Viewer — apenas visualiza</option>
               <option value="admin">Administrador — acesso total</option>
             </select>
           </div>
@@ -807,6 +906,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 /* ─── State ────────────────────────────────────────────────────────────── */
 let allPecas     = [];
@@ -947,8 +1047,10 @@ function updateVehicleFilterUI(){
 }
 
 /* ─── Views ───────────────────────────────────────────────────────────── */
-const VIEWS=['dashboard','todas','veiculos','pendentes','fora','movimentacoes','perfis'];
-const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações',perfis:'Perfis de Acesso'};
+const VIEWS=['dashboard','todas','veiculos','pendentes','fora','movimentacoes','autorizacoes','perfis'];
+const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações',autorizacoes:'Autorizações',perfis:'Perfis de Acesso'};
+function isAdmin(){ return currentUser && currentUser.papel==='admin'; }
+function canOperar(){ return currentUser && (currentUser.papel==='admin' || currentUser.papel==='operacao'); }
 
 function setView(v){
   VIEWS.forEach(id=>{
@@ -963,6 +1065,7 @@ function setView(v){
   if(v==='veiculos')   renderVeiculos();
   if(v==='movimentacoes') loadTodasMovimentacoes();
   if(v==='dashboard')  loadDashboard();
+  if(v==='autorizacoes') loadAutorizacoes();
   if(v==='perfis')     loadPerfis();
   if(v!=='movimentacoes') _movsCache=null;
   if(v!=='todas'&&vehicleFilter){vehicleFilter=null;updateVehicleFilterUI();}
@@ -1040,6 +1143,7 @@ function openModal(id){
   } else { main.style.display='none'; ph.style.display='flex'; }
 
   document.getElementById('btnExcluirPeca').style.display=(currentUser&&currentUser.papel==='admin')?'':'none';
+  applyRoleModal();
   setupPrecoML(p);
   document.getElementById('historicoResult').innerHTML='<div class="text-muted small">Carregando...</div>';
   if(!modalBs) modalBs=new bootstrap.Modal(document.getElementById('modalPeca'));
@@ -1113,7 +1217,8 @@ function openBaixaModal(){
   const p=allPecas.find(x=>x.id===currentId); if(!p) return;
   const cc=catColor(p.categoria);
   document.getElementById('baixaPecaInfo').innerHTML=`<span class="badge me-2" style="background:${cc.bg};color:${cc.t}">${p.categoria}</span><strong>${p.nome}</strong>${p.codigo?`<span class="text-muted ms-2 small">${p.codigo}</span>`:''}<br><span class="mt-1 d-inline-block text-muted">Estoque atual: <strong style="color:var(--brand-navy)">${p.quantidade} un.</strong></span>`;
-  document.getElementById('bxResponsavel').value='';
+  const rInput=document.getElementById('bxResponsavel');
+  rInput.value=currentUser?currentUser.nome:''; rInput.readOnly=true; rInput.style.background='#f1f3f9';
   document.getElementById('bxQtd').value=1; document.getElementById('bxQtd').max=p.quantidade;
   document.getElementById('bxObs').value='';
   document.getElementById('bxData').value=new Date().toISOString().split('T')[0];
@@ -1135,35 +1240,211 @@ function openBaixaModal(){
   setTimeout(()=>modalBaixaBs.show(),300);
 }
 async function submitBaixa(){
-  const resp=document.getElementById('bxResponsavel').value.trim(), qtd=parseInt(document.getElementById('bxQtd').value);
-  if(!resp){document.getElementById('bxResponsavel').focus();return;}
+  const qtd=parseInt(document.getElementById('bxQtd').value);
+  const veic=document.getElementById('bxVeiculo').value;
+  const obs=document.getElementById('bxObs').value.trim();
   if(!qtd||qtd<1){document.getElementById('bxQtd').focus();return;}
+  const placa=veic ? veic.split(' ')[0].toUpperCase() : '';
+  if(!isAdmin() && !placa){ showToast('Selecione o veículo.','danger'); document.getElementById('bxVeiculo').focus(); return; }
   const btn=document.querySelector('#modalBaixa .modal-footer .btn:last-child');
+  const restore=()=>{ if(btn){ btn.disabled=false; btn.innerHTML='<i class="bi bi-check2-circle me-1"></i>Confirmar Baixa'; } };
   if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Salvando...'; }
-  const payload={peca_id:currentId,responsavel:resp,veiculo:document.getElementById('bxVeiculo').value,
-    quantidade:qtd,data:document.getElementById('bxData').value,observacoes:document.getElementById('bxObs').value.trim()};
-  // Tenta até 3 vezes (protege contra reinício do servidor)
-  let lastErr='Erro de conexão';
-  for(let i=0;i<3;i++){
+
+  // ADMIN → baixa direta (autorizada por ele mesmo). OPERAÇÃO → vai para a fila de autorização.
+  if(isAdmin()){
+    const payload={peca_id:currentId,responsavel:currentUser.nome,veiculo:veic,quantidade:qtd,observacoes:obs};
+    let lastErr='Erro de conexão';
+    for(let i=0;i<3;i++){
+      try{
+        const r=await fetch('/api/movimentacoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        if(r.status===401){window.location.href='/login';return;}
+        const res=await r.json();
+        if(res.success){
+          const p=allPecas.find(x=>x.id===currentId); if(p) p.quantidade=res.nova_quantidade;
+          if(modalBaixaBs) modalBaixaBs.hide();
+          showToast(`Baixa registrada! Estoque: ${res.nova_quantidade} un.`,'success'); reloadStats();
+          return;
+        }
+        lastErr=res.error||'Erro ao registrar.'; break;
+      }catch(e){ lastErr='Sem conexão com o servidor.'; if(i<2) await new Promise(ok=>setTimeout(ok,1500)); }
+    }
+    restore(); showToast(lastErr,'danger');
+  } else {
+    const payload={tipo:'baixa',peca_id:currentId,placa,quantidade:qtd,observacao:obs};
     try{
-      const r=await fetch('/api/movimentacoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const r=await fetch('/api/solicitacoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       if(r.status===401){window.location.href='/login';return;}
       const res=await r.json();
-      if(res.success){
-        const p=allPecas.find(x=>x.id===currentId); if(p) p.quantidade=res.nova_quantidade;
-        if(modalBaixaBs) modalBaixaBs.hide();
-        showToast(`Baixa registrada! Estoque: ${res.nova_quantidade} un.`,'success');
-        return;
-      }
-      lastErr=res.error||'Erro ao registrar.';
-      break; // erro de negócio (ex: estoque insuficiente) — não retenta
-    }catch(e){
-      lastErr='Sem conexão com o servidor.';
-      if(i<2) await new Promise(ok=>setTimeout(ok,1500)); // aguarda 1,5s antes de retentar
-    }
+      if(res.success){ if(modalBaixaBs) modalBaixaBs.hide(); showToast('Registrado. Aguardando autorização do administrador.','success'); return; }
+      restore(); showToast(res.error||'Erro ao registrar.','danger');
+    }catch(e){ restore(); showToast('Sem conexão com o servidor.','danger'); }
   }
-  if(btn){ btn.disabled=false; btn.innerHTML='<i class="bi bi-check2-circle me-1"></i>Confirmar Baixa'; }
-  showToast(lastErr,'danger');
+}
+
+/* ─── Entrada de Peça ─────────────────────────────────────────────────── */
+let modalEntradaBs=null;
+function openEntradaModal(){
+  const p=allPecas.find(x=>x.id===currentId); if(!p) return;
+  const cc=catColor(p.categoria);
+  document.getElementById('entradaPecaInfo').innerHTML=`<span class="badge me-2" style="background:${cc.bg};color:${cc.t}">${p.categoria}</span><strong>${p.nome}</strong>${p.codigo?`<span class="text-muted ms-2 small">${p.codigo}</span>`:''}<br><span class="mt-1 d-inline-block text-muted">Estoque atual: <strong style="color:var(--brand-navy)">${p.quantidade} un.</strong></span>`;
+  document.getElementById('enResponsavel').value=currentUser?currentUser.nome:'';
+  document.getElementById('enQtd').value=1;
+  document.getElementById('enFornecedor').value=''; document.getElementById('enNota').value='';
+  document.getElementById('enCusto').value=''; document.getElementById('enObs').value='';
+  document.getElementById('entradaAviso').innerHTML=isAdmin()
+    ? '<i class="bi bi-info-circle me-1"></i>Como admin, a entrada é registrada e o estoque sobe na hora.'
+    : '<i class="bi bi-info-circle me-1"></i>A entrada vai para autorização do administrador.';
+  if(!modalEntradaBs) modalEntradaBs=new bootstrap.Modal(document.getElementById('modalEntrada'));
+  if(modalBs) modalBs.hide();
+  setTimeout(()=>modalEntradaBs.show(),300);
+}
+async function submitEntrada(){
+  const qtd=parseInt(document.getElementById('enQtd').value);
+  if(!qtd||qtd<1){document.getElementById('enQtd').focus();return;}
+  const custoRaw=document.getElementById('enCusto').value;
+  const payload={tipo:'entrada',peca_id:currentId,quantidade:qtd,
+    fornecedor:document.getElementById('enFornecedor').value.trim(),
+    nota_fiscal:document.getElementById('enNota').value.trim(),
+    custo_unitario:custoRaw===''?null:Number(custoRaw),
+    observacao:document.getElementById('enObs').value.trim()};
+  const btn=document.querySelector('#modalEntrada .modal-footer .btn:last-child');
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Salvando...'; }
+  const restore=()=>{ if(btn){ btn.disabled=false; btn.innerHTML='<i class="bi bi-check2-circle me-1"></i>Registrar Entrada'; } };
+  try{
+    const r=await fetch('/api/solicitacoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(r.status===401){window.location.href='/login';return;}
+    const res=await r.json();
+    if(res.success){
+      if(modalEntradaBs) modalEntradaBs.hide();
+      if(isAdmin()){
+        // admin: aprova a própria entrada imediatamente
+        const ar=await fetch(`/api/solicitacoes/${res.solicitacao.id}/aprovar`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+        const ad=await ar.json();
+        if(ad.success){ const p=allPecas.find(x=>x.id===currentId); if(p) p.quantidade=ad.novo_saldo;
+          showToast(`Entrada registrada! Estoque: ${ad.novo_saldo} un.`,'success'); reloadStats(); }
+        else showToast(ad.error||'Erro ao aprovar entrada.','danger');
+      } else {
+        showToast('Entrada registrada. Aguardando autorização do administrador.','success');
+      }
+      return;
+    }
+    restore(); showToast(res.error||'Erro ao registrar entrada.','danger');
+  }catch(e){ restore(); showToast('Sem conexão com o servidor.','danger'); }
+}
+
+/* ─── Autorizações (admin) ────────────────────────────────────────────── */
+let _autorizFiltro='pendente';
+function setAutorizFiltro(f,el){
+  _autorizFiltro=f;
+  document.querySelectorAll('#autorizTabs .nav-link').forEach(a=>a.classList.remove('active'));
+  if(el) el.classList.add('active');
+  loadAutorizacoes();
+}
+function refreshBadgePendencias(){
+  fetch('/api/solicitacoes/pendentes/count').then(r=>r.ok?r.json():null).then(d=>{
+    if(!d) return;
+    const b=document.getElementById('badgePendAutoriz');
+    if(b){ b.textContent=d.count; b.style.display=d.count>0?'':'none'; }
+    const c=document.getElementById('cntPend'); if(c) c.textContent=d.count;
+  }).catch(()=>{});
+}
+function loadAutorizacoes(){
+  if(!isAdmin()) return;
+  refreshBadgePendencias();
+  const wrap=document.getElementById('autorizList');
+  wrap.innerHTML='<div class="col-12 text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>';
+  fetch('/api/solicitacoes?status='+_autorizFiltro).then(r=>r.json()).then(d=>{
+    const arr=d.solicitacoes||[];
+    if(!arr.length){ wrap.innerHTML=`<div class="col-12 text-center text-muted py-5"><i class="bi bi-check2-circle fs-1 d-block mb-2"></i>Nada ${_autorizFiltro==='pendente'?'aguardando autorização':'nesta lista'}.</div>`; return; }
+    wrap.innerHTML=arr.map(s=>cardAutoriz(s)).join('');
+  }).catch(()=>{ wrap.innerHTML='<div class="col-12 text-danger">Erro ao carregar.</div>'; });
+}
+function estoqueDaPeca(id){ const p=allPecas.find(x=>x.id===id); return p?p.quantidade:'?'; }
+function cardAutoriz(s){
+  const entrada=s.tipo==='entrada';
+  const cor=entrada?'var(--brand-cyan)':'var(--brand-orange)';
+  const dt=new Date(s.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  let acoes='';
+  if(s.status==='pendente'){
+    acoes=`<div class="d-flex gap-2 mt-2 flex-wrap">
+      <button class="btn btn-sm fw-semibold text-white" style="background:#1a8a4a" onclick="aprovarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-check-lg me-1"></i>Autorizar</button>
+      <button class="btn btn-sm fw-semibold text-white" style="background:var(--brand-orange)" onclick="ajustarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-pencil me-1"></i>Ajustar</button>
+      <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="recusarSol('${s.id}')"><i class="bi bi-x-lg me-1"></i>Recusar</button>
+    </div>`;
+  } else if(s.status==='aprovada'){
+    acoes=`<div class="small text-success mt-1"><i class="bi bi-check-circle me-1"></i>Autorizado por ${s.aprovado_por_nome||'—'}${s.quantidade_aprovada!=null&&s.quantidade_aprovada!==s.quantidade_solicitada?` (ajustado p/ ${s.quantidade_aprovada})`:''}</div>`;
+  } else {
+    acoes=`<div class="small text-danger mt-1"><i class="bi bi-x-circle me-1"></i>Recusado: ${s.motivo_recusa||''}</div>`;
+  }
+  return `<div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100" style="border-left:5px solid ${cor}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="badge" style="background:${cor};color:#fff">${entrada?'⬇ Entrada':'⬆ Saída'}</span>
+          <span class="badge ${s.status==='pendente'?'bg-warning text-dark':s.status==='aprovada'?'bg-success':'bg-danger'}">${s.status}</span>
+        </div>
+        <div class="fw-bold mt-2" style="color:var(--brand-navy)">${s.peca_nome} ${s.peca_codigo?`<small class="text-muted">(${s.peca_codigo})</small>`:''}</div>
+        <div class="small text-muted mt-1">
+          <b>Quem pediu:</b> ${s.solicitante_nome} · ${dt}<br>
+          ${entrada?`<b>Fornecedor:</b> ${s.fornecedor||'—'}${s.nota_fiscal?` · NF ${s.nota_fiscal}`:''}<br>`:`<b>Veículo:</b> ${s.placa||'—'}<br>`}
+          <b>Quantidade:</b> ${s.quantidade_solicitada} · <b>Estoque atual:</b> <span class="fw-bold">${estoqueDaPeca(s.peca_id)}</span>
+          ${s.observacao?`<br><b>Obs:</b> ${s.observacao}`:''}
+        </div>
+        ${acoes}
+      </div>
+    </div></div>`;
+}
+async function _acaoSol(url,body,okMsg){
+  try{
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+    const d=await r.json();
+    if(d.success){
+      if(d.novo_saldo!=null){ const p=allPecas.find(x=>x.id===d.solicitacao.peca_id); if(p) p.quantidade=d.novo_saldo; }
+      showToast(okMsg,'success'); reloadStats(); loadAutorizacoes(); return true;
+    }
+    showToast(d.error||'Erro.','danger'); return false;
+  }catch(e){ showToast('Sem conexão.','danger'); return false; }
+}
+function aprovarSol(id,qtd){ if(!confirm(`Autorizar e mover o estoque em ${qtd} un.?`)) return; _acaoSol(`/api/solicitacoes/${id}/aprovar`,{},'Autorizado.'); }
+function ajustarSol(id,sug){ const v=prompt('Quantidade autorizada:',sug); if(v===null) return; const q=parseInt(v); if(!Number.isInteger(q)||q<=0){showToast('Quantidade inválida','danger');return;} _acaoSol(`/api/solicitacoes/${id}/aprovar`,{quantidade_aprovada:q},`Autorizado (${q}).`); }
+function recusarSol(id){ const m=prompt('Motivo da recusa (obrigatório):'); if(m===null) return; if(!m.trim()){showToast('Motivo é obrigatório','danger');return;} _acaoSol(`/api/solicitacoes/${id}/recusar`,{motivo:m},'Recusado.'); }
+
+/* ─── QR Code de acesso ───────────────────────────────────────────────── */
+let _qrModalBs=null;
+function openQrModal(){
+  const url=window.location.origin+'/login';
+  const area=document.getElementById('qrArea'); area.innerHTML='';
+  document.getElementById('qrUrl').textContent=url;
+  if(typeof QRCode==='undefined'){ area.innerHTML='<div class="text-danger small">Biblioteca de QR não carregou (verifique a internet).</div>'; }
+  else { new QRCode(area,{text:url,width:220,height:220,colorDark:'#1B2B6E',colorLight:'#ffffff'}); }
+  if(!_qrModalBs) _qrModalBs=new bootstrap.Modal(document.getElementById('modalQr'));
+  _qrModalBs.show();
+}
+function imprimirQr(){
+  const img=document.querySelector('#qrArea img, #qrArea canvas');
+  let qrHtml='';
+  if(img){ qrHtml = img.tagName==='CANVAS' ? `<img src="${img.toDataURL()}" style="width:320px;height:320px">` : `<img src="${img.src}" style="width:320px;height:320px">`; }
+  const url=window.location.origin+'/login';
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>QR Acesso — Bolsão Peças</title><style>
+    @page{size:A4;margin:0} body{margin:0;font-family:Arial,sans-serif;text-align:center;padding:60px 40px}
+    .logo{color:#1B2B6E;font-size:34px;font-weight:800;margin-bottom:4px}
+    .sub{color:#F5941D;font-weight:700;font-size:18px;margin-bottom:40px}
+    .qr{margin:30px auto}
+    h1{color:#1B2B6E;font-size:26px;margin:20px 0 6px} p{color:#555;font-size:16px;line-height:1.5}
+    .url{margin-top:24px;font-size:14px;color:#888}
+    .foot{margin-top:60px;color:#1B2B6E;font-weight:700}
+  </style></head><body>
+    <div class="logo">🔧 BOLSÃO PEÇAS</div>
+    <div class="sub">Comercial Bolsão de Bebidas — Guarulhos/SP</div>
+    <div class="qr">${qrHtml}</div>
+    <h1>Acesso ao Estoque</h1>
+    <p>Aponte a câmera do celular para o QR Code.<br>Entre com <b>seu login e senha</b>.<br>Registre a <b>baixa</b> ou <b>entrada</b> de peças.</p>
+    <div class="url">${url}</div>
+    <div class="foot">Almoxarifado / Oficina</div>
+    <script>window.onload=()=>window.print()<\/script>
+  </body></html>`);
+  w.document.close();
 }
 
 /* ─── Nova Peça ───────────────────────────────────────────────────────── */
@@ -1632,10 +1913,27 @@ function applyRole(){
   const chip=document.getElementById('userChip');
   document.getElementById('userNome').textContent=currentUser.nome;
   const pb=document.getElementById('userPapelBadge');
-  if(currentUser.papel==='admin'){pb.textContent='Admin';pb.style.background='var(--brand-navy)';pb.style.color='#fff';}
-  else{pb.textContent='Operador';pb.style.background='var(--brand-cyan)';pb.style.color='#fff';}
+  const LB={admin:['Admin','var(--brand-navy)'],operacao:['Operação','var(--brand-cyan)'],viewer:['Visualização','#8a92b2']};
+  const info=LB[currentUser.papel]||LB.viewer;
+  pb.textContent=info[0]; pb.style.background=info[1]; pb.style.color='#fff';
   chip.style.removeProperty('display'); chip.classList.remove('d-none');
-  document.getElementById('navPerfisItem').style.display=currentUser.papel==='admin'?'':'none';
+  const admin=isAdmin(), oper=canOperar();
+  // Só admin: cadastrar peça, perfis, autorizações
+  document.getElementById('navPerfisItem').style.display=admin?'':'none';
+  document.getElementById('navAutorizacoesItem').style.display=admin?'':'none';
+  const bnp=document.getElementById('btnNovaPeca'); if(bnp) bnp.style.display=admin?'':'none';
+  if(admin) refreshBadgePendencias();
+}
+// Aplica permissões dentro do modal de detalhe (chamado no openModal)
+function applyRoleModal(){
+  const admin=isAdmin(), oper=canOperar();
+  const show=(id,ok)=>{const e=document.getElementById(id); if(e) e.style.display=ok?'':'none';};
+  show('mFotoUploadWrap',admin);
+  show('mPrecoWrap',admin);
+  show('btnEditarPeca',admin);
+  show('btnDarBaixa',oper);
+  show('btnEntrada',oper);
+  document.querySelectorAll('.qtyAdmin').forEach(b=>b.style.display=admin?'':'none');
 }
 
 /* ─── Excluir peça ────────────────────────────────────────────────────── */
@@ -1665,7 +1963,7 @@ function loadPerfis(){
       <thead class="table-dark"><tr><th>Nome</th><th>Nível</th><th>Status</th><th class="text-end">Ações</th></tr></thead>
       <tbody>${lista.map(p=>`<tr>
         <td class="fw-semibold">${p.nome}${p.id===currentUser?.id?'<span class="badge bg-secondary ms-2" style="font-size:.6rem">você</span>':''}</td>
-        <td>${p.papel==='admin'?'<span class="badge" style="background:var(--brand-navy)">Administrador</span>':'<span class="badge" style="background:var(--brand-cyan);color:#fff">Operador</span>'}</td>
+        <td>${p.papel==='admin'?'<span class="badge" style="background:var(--brand-navy)">Administrador</span>':p.papel==='viewer'?'<span class="badge" style="background:#8a92b2;color:#fff">Viewer</span>':'<span class="badge" style="background:var(--brand-cyan);color:#fff">Operação</span>'}</td>
         <td>${p.ativo?'<span class="badge bg-success">Ativo</span>':'<span class="badge bg-secondary">Inativo</span>'}</td>
         <td class="text-end">
           <button class="btn btn-sm btn-outline-secondary me-1" title="Editar" onclick="openPerfilModal('${p.id}')"><i class="bi bi-pencil"></i></button>
