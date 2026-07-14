@@ -1361,14 +1361,31 @@ function loadAutorizacoes(){
 }
 function estoqueDaPeca(id){ const p=allPecas.find(x=>x.id===id); return p?p.quantidade:'?'; }
 function cardAutoriz(s){
-  const entrada=s.tipo==='entrada';
-  const cor=entrada?'var(--brand-cyan)':'var(--brand-orange)';
+  const cadastro=s.tipo==='cadastro', entrada=s.tipo==='entrada';
+  const cor=cadastro?'#7c3aed':entrada?'var(--brand-cyan)':'var(--brand-orange)';
+  const tituloTipo=cadastro?'🆕 Nova peça':entrada?'⬇ Entrada':'⬆ Saída';
   const dt=new Date(s.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const d=s.dados||{};
+  const fotoThumb=(s.fotos&&s.fotos.length)?`<img src="/fotos/${s.fotos[0]}" style="width:64px;height:50px;object-fit:cover;border-radius:6px;float:right;margin-left:8px" onerror="this.style.display='none'">`:'';
+  let corpo;
+  if(cadastro){
+    corpo=`<b>Quem cadastrou:</b> ${s.solicitante_nome} · ${dt}<br>
+      <b>Categoria:</b> ${d.categoria||'—'} · <b>Fabricante:</b> ${d.fabricante||'—'}<br>
+      ${d.codigo?`<b>Código:</b> ${d.codigo}<br>`:''}
+      <b>Estoque inicial:</b> ${s.quantidade_solicitada}
+      ${d.descricao?`<br><b>Descrição:</b> ${d.descricao}`:''}
+      ${s.fotos&&s.fotos.length>1?`<br><span class="text-muted">${s.fotos.length} fotos</span>`:''}`;
+  } else {
+    corpo=`<b>Quem pediu:</b> ${s.solicitante_nome} · ${dt}<br>
+      ${entrada?`<b>Fornecedor:</b> ${s.fornecedor||'—'}${s.nota_fiscal?` · NF ${s.nota_fiscal}`:''}<br>`:`<b>Veículo:</b> ${s.placa||'—'}<br>`}
+      <b>Quantidade:</b> ${s.quantidade_solicitada} · <b>Estoque atual:</b> <span class="fw-bold">${estoqueDaPeca(s.peca_id)}</span>
+      ${s.observacao?`<br><b>Obs:</b> ${s.observacao}`:''}`;
+  }
   let acoes='';
   if(s.status==='pendente'){
     acoes=`<div class="d-flex gap-2 mt-2 flex-wrap">
       <button class="btn btn-sm fw-semibold text-white" style="background:#1a8a4a" onclick="aprovarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-check-lg me-1"></i>Autorizar</button>
-      <button class="btn btn-sm fw-semibold text-white" style="background:var(--brand-orange)" onclick="ajustarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-pencil me-1"></i>Ajustar</button>
+      <button class="btn btn-sm fw-semibold text-white" style="background:var(--brand-orange)" onclick="ajustarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-pencil me-1"></i>Ajustar qtd</button>
       <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="recusarSol('${s.id}')"><i class="bi bi-x-lg me-1"></i>Recusar</button>
     </div>`;
   } else if(s.status==='aprovada'){
@@ -1380,16 +1397,12 @@ function cardAutoriz(s){
     <div class="card shadow-sm h-100" style="border-left:5px solid ${cor}">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start">
-          <span class="badge" style="background:${cor};color:#fff">${entrada?'⬇ Entrada':'⬆ Saída'}</span>
+          <span class="badge" style="background:${cor};color:#fff">${tituloTipo}</span>
           <span class="badge ${s.status==='pendente'?'bg-warning text-dark':s.status==='aprovada'?'bg-success':'bg-danger'}">${s.status}</span>
         </div>
+        ${fotoThumb}
         <div class="fw-bold mt-2" style="color:var(--brand-navy)">${s.peca_nome} ${s.peca_codigo?`<small class="text-muted">(${s.peca_codigo})</small>`:''}</div>
-        <div class="small text-muted mt-1">
-          <b>Quem pediu:</b> ${s.solicitante_nome} · ${dt}<br>
-          ${entrada?`<b>Fornecedor:</b> ${s.fornecedor||'—'}${s.nota_fiscal?` · NF ${s.nota_fiscal}`:''}<br>`:`<b>Veículo:</b> ${s.placa||'—'}<br>`}
-          <b>Quantidade:</b> ${s.quantidade_solicitada} · <b>Estoque atual:</b> <span class="fw-bold">${estoqueDaPeca(s.peca_id)}</span>
-          ${s.observacao?`<br><b>Obs:</b> ${s.observacao}`:''}
-        </div>
+        <div class="small text-muted mt-1">${corpo}</div>
         ${acoes}
       </div>
     </div></div>`;
@@ -1399,7 +1412,8 @@ async function _acaoSol(url,body,okMsg){
     const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
     const d=await r.json();
     if(d.success){
-      if(d.novo_saldo!=null){ const p=allPecas.find(x=>x.id===d.solicitacao.peca_id); if(p) p.quantidade=d.novo_saldo; }
+      // recarrega o catálogo (cadastro cria peça nova; baixa/entrada mudam saldo)
+      try{ const pr=await fetch('/api/pecas'); const pd=await pr.json(); if(pd.pecas) allPecas=pd.pecas; }catch(_){}
       showToast(okMsg,'success'); reloadStats(); loadAutorizacoes(); return true;
     }
     showToast(d.error||'Erro.','danger'); return false;
@@ -1635,8 +1649,24 @@ async function submitNovaPeca(){
       if(modalNovaBs) modalNovaBs.hide();
       reloadStats(); filterPecas();
       showToast(`"${nome}" atualizada!`,'success');
+    } else if(!isAdmin()){
+      // ── OPERADOR: cadastro vai para AUTORIZAÇÃO ──
+      let fotos=[];
+      const files=document.getElementById('npFotoInput').files;
+      if(files.length){
+        const fd=new FormData(); Array.from(files).forEach(f=>fd.append('fotos',f));
+        const rf=await fetch('/api/fotos-temp',{method:'POST',body:fd});
+        const df=await rf.json(); if(df.success) fotos=df.fotos;
+      }
+      const r=await fetch('/api/solicitacoes',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({tipo:'cadastro',dados:payload,fotos})});
+      if(r.status===401){window.location.href='/login';return;}
+      const d=await r.json();
+      if(!d.success){showToast(d.error||'Erro.','danger');return;}
+      if(modalNovaBs) modalNovaBs.hide();
+      showToast('Peça registrada. Aguardando autorização do administrador.','success');
     } else {
-      // ── CRIAR ──
+      // ── ADMIN: cria direto ──
       const r=await fetch('/api/pecas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       const d=await r.json();
       if(!d.success){showToast(d.error||'Erro.','danger');return;}
@@ -1921,7 +1951,7 @@ function applyRole(){
   // Só admin: cadastrar peça, perfis, autorizações
   document.getElementById('navPerfisItem').style.display=admin?'':'none';
   document.getElementById('navAutorizacoesItem').style.display=admin?'':'none';
-  const bnp=document.getElementById('btnNovaPeca'); if(bnp) bnp.style.display=admin?'':'none';
+  const bnp=document.getElementById('btnNovaPeca'); if(bnp) bnp.style.display=oper?'':'none';
   if(admin) refreshBadgePendencias();
 }
 // Aplica permissões dentro do modal de detalhe (chamado no openModal)

@@ -336,6 +336,13 @@ app.post('/api/pecas/:id/fotos', upload.array('fotos', 10), (req, res) => {
   res.json({ success: true, fotos: filenames });
 });
 
+// Upload de fotos SEM peça ainda (usado no cadastro que vai p/ autorização).
+// Os arquivos já ficam no fotosDir; os nomes são anexados à solicitação e à peça na aprovação.
+app.post('/api/fotos-temp', upload.array('fotos', 10), (req, res) => {
+  if (!req.files || !req.files.length) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+  res.json({ success: true, fotos: req.files.map(f => f.filename) });
+});
+
 // ─── PEÇAS ────────────────────────────────────────────────────────────────────
 app.get('/api/pecas', (req, res) => {
   const catalog = loadCatalog();
@@ -359,7 +366,7 @@ app.get('/api/pecas/:id', (req, res) => {
   res.json(peca);
 });
 
-app.post('/api/pecas', (req, res) => {
+app.post('/api/pecas', ensureAdmin, (req, res) => {
   const catalog = loadCatalog();
   const { nome, codigo, fabricante, categoria, descricao, veiculos_compativeis, quantidade, pendente_analise, observacoes } = req.body;
   if (!nome || !categoria) return res.status(400).json({ error: 'Nome e categoria são obrigatórios' });
@@ -828,7 +835,38 @@ function nextSolId(catalog) {
 app.post('/api/solicitacoes', ensureOperacao, (req, res) => {
   const perfil = getPerfilFromReq(req);
   const { tipo, peca_id, placa, quantidade, observacao, fornecedor, custo_unitario, nota_fiscal } = req.body;
-  if (!['baixa', 'entrada'].includes(tipo)) return res.status(400).json({ error: "tipo deve ser 'baixa' ou 'entrada'" });
+
+  // ── CADASTRO de nova peça (vai para autorização; não entra no catálogo ainda) ──
+  if (tipo === 'cadastro') {
+    const dados = req.body.dados || {};
+    if (!dados.nome || !dados.categoria) return res.status(400).json({ error: 'Nome e categoria são obrigatórios' });
+    const catalog = loadCatalog();
+    if (!catalog.solicitacoes) catalog.solicitacoes = [];
+    const sol = {
+      id: nextSolId(catalog), tipo: 'cadastro', status: 'pendente',
+      peca_id: null, peca_nome: dados.nome, peca_codigo: dados.codigo || '',
+      placa: null,
+      quantidade_solicitada: parseInt(dados.quantidade) || 0, quantidade_aprovada: null,
+      observacao: observacao || dados.observacoes || '',
+      dados: {
+        nome: dados.nome, codigo: dados.codigo || '', fabricante: dados.fabricante || 'Não identificado',
+        categoria: dados.categoria, descricao: dados.descricao || '',
+        veiculos_compativeis: Array.isArray(dados.veiculos_compativeis) ? dados.veiculos_compativeis : [],
+        quantidade: parseInt(dados.quantidade) || 0, observacoes: dados.observacoes || '',
+        preco_referencia: dados.preco_referencia != null ? Number(dados.preco_referencia) : undefined
+      },
+      fotos: Array.isArray(req.body.fotos) ? req.body.fotos : [],
+      solicitante_id: perfil.id, solicitante_nome: perfil.nome,
+      criado_em: new Date().toISOString(),
+      aprovado_por: null, aprovado_por_nome: null, aprovado_em: null, motivo_recusa: null
+    };
+    catalog.solicitacoes.push(sol);
+    saveCatalog(catalog);
+    registrarAuditoria(catalog, perfil, 'criar_solicitacao', 'solicitacao', sol.id, null, sol, req);
+    return res.json({ success: true, solicitacao: sol });
+  }
+
+  if (!['baixa', 'entrada'].includes(tipo)) return res.status(400).json({ error: "tipo deve ser 'baixa', 'entrada' ou 'cadastro'" });
   const qty = parseInt(quantidade);
   if (!Number.isInteger(qty) || qty <= 0) return res.status(400).json({ error: 'quantidade deve ser inteiro positivo' });
 
@@ -900,6 +938,28 @@ app.post('/api/solicitacoes/:id/aprovar', ensureAdmin, (req, res) => {
     }
     const antes = JSON.parse(JSON.stringify(sol));
     try {
+      // ── CADASTRO: cria a peça no catálogo (estoque inicial via livro-razão) ──
+      if (sol.tipo === 'cadastro') {
+        const d = sol.dados || {};
+        const maxNum = catalog.pecas.reduce((m, p) => { const n = parseInt(p.id); return n > m ? n : m; }, 0);
+        const nova = {
+          id: String(maxNum + 1).padStart(3, '0'),
+          nome: d.nome, codigo: d.codigo || '', fabricante: d.fabricante || 'Não identificado',
+          categoria: d.categoria, descricao: d.descricao || '',
+          veiculos_compativeis: Array.isArray(d.veiculos_compativeis) ? d.veiculos_compativeis : [],
+          quantidade: 0, pendente_analise: false, observacoes: d.observacoes || '',
+          fotos: Array.isArray(sol.fotos) ? sol.fotos : []
+        };
+        if (d.preco_referencia != null) nova.preco_referencia = Number(d.preco_referencia);
+        catalog.pecas.push(nova);
+        if (qty > 0) aplicarMovimentacao(catalog, { peca_id: nova.id, tipo: 'entrada', quantidade: qty, solicitacao_id: sol.id, usuario_id: perfil.id });
+        sol.status = 'aprovada'; sol.quantidade_aprovada = qty; sol.peca_id = nova.id;
+        sol.aprovado_por = perfil.id; sol.aprovado_por_nome = perfil.nome; sol.aprovado_em = new Date().toISOString();
+        saveCatalog(catalog);
+        registrarAuditoria(catalog, perfil, 'aprovar_solicitacao', 'solicitacao', sol.id, antes, sol, req);
+        res.json({ success: true, solicitacao: sol, peca: nova, novo_saldo: nova.quantidade });
+        return;
+      }
       const { saldoNovo } = aplicarMovimentacao(catalog, {
         peca_id: sol.peca_id,
         tipo: sol.tipo === 'entrada' ? 'entrada' : 'saida',
