@@ -1935,7 +1935,8 @@ async function init(){
   const _cs=document.getElementById('catSelect');
   if(_cs&&_cs.options.length<=1){cd.forEach(cat=>{const o=document.createElement('option');o.value=cat.categoria;o.textContent=cat.categoria;_cs.appendChild(o);});}
   restoreSections();
-  setView('dashboard');
+  // Operador/viewer começam já nas peças (com foto); admin no dashboard.
+  setView(isAdmin() ? 'dashboard' : 'todas');
 }
 /* ─── Role / user ─────────────────────────────────────────────────────── */
 function applyRole(){
@@ -1952,6 +1953,11 @@ function applyRole(){
   document.getElementById('navPerfisItem').style.display=admin?'':'none';
   document.getElementById('navAutorizacoesItem').style.display=admin?'':'none';
   const bnp=document.getElementById('btnNovaPeca'); if(bnp) bnp.style.display=oper?'':'none';
+  // Menu enxuto para operador/viewer: escondemos as telas de análise do admin.
+  ['navDash','navPendentes','navFora','navMovs'].forEach(id=>{
+    const a=document.getElementById(id); const li=a&&a.closest('li');
+    if(li) li.style.display=admin?'':'none';
+  });
   if(admin) refreshBadgePendencias();
 }
 // Aplica permissões dentro do modal de detalhe (chamado no openModal)
