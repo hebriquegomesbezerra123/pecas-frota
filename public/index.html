@@ -259,6 +259,9 @@
         <button class="btn btn-sm fw-semibold" id="btnNovaPeca" style="background:var(--brand-orange);color:#fff" onclick="openNovaPecaModal()">
           <i class="bi bi-plus-lg me-1"></i>Nova Peça
         </button>
+        <button class="btn btn-sm fw-semibold" id="btnNovoVeiculo" style="background:var(--brand-navy);color:#fff;display:none" onclick="openNovoVeiculoModal()">
+          <i class="bi bi-truck me-1"></i>Novo Veículo
+        </button>
         <span class="text-muted small d-none d-md-block" id="topbarInfo"></span>
       </div>
     </div>
@@ -803,6 +806,41 @@
   </div>
 </div>
 
+<!-- ── Modal: Novo Veículo ─────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalVeiculo" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--brand-navy);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-truck me-2"></i>Cadastrar Veículo</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-5">
+            <label class="form-label">Placa *</label>
+            <input type="text" class="form-control text-uppercase" id="vcPlaca" placeholder="ABC1D23" maxlength="8">
+          </div>
+          <div class="col-md-7">
+            <label class="form-label">Modelo *</label>
+            <input type="text" class="form-control" id="vcModelo" placeholder="Ex: VW/EXPRESS DRF">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Marca</label>
+            <input type="text" class="form-control" id="vcMarca" placeholder="Ex: VW, Mercedes-Benz, Fiat">
+          </div>
+        </div>
+        <div class="small text-muted mt-3" id="veiculoAviso"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn fw-semibold" style="background:var(--brand-navy);color:#fff" onclick="submitVeiculo()">
+          <i class="bi bi-check2-circle me-1"></i>Cadastrar Veículo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Modal: Entrada de Peça ──────────────────────────────────────────────── -->
 <div class="modal fade" id="modalEntrada" tabindex="-1">
   <div class="modal-dialog">
@@ -1332,6 +1370,46 @@ async function submitEntrada(){
   }catch(e){ restore(); showToast('Sem conexão com o servidor.','danger'); }
 }
 
+/* ─── Novo Veículo ────────────────────────────────────────────────────── */
+let modalVeiculoBs=null;
+function openNovoVeiculoModal(){
+  document.getElementById('vcPlaca').value='';
+  document.getElementById('vcModelo').value='';
+  document.getElementById('vcMarca').value='';
+  document.getElementById('veiculoAviso').innerHTML=isAdmin()
+    ? '<i class="bi bi-info-circle me-1"></i>Como admin, o veículo entra na frota na hora.'
+    : '<i class="bi bi-info-circle me-1"></i>O veículo vai para autorização do administrador.';
+  if(!modalVeiculoBs) modalVeiculoBs=new bootstrap.Modal(document.getElementById('modalVeiculo'));
+  modalVeiculoBs.show();
+}
+async function submitVeiculo(){
+  const placa=document.getElementById('vcPlaca').value.trim().toUpperCase();
+  const modelo=document.getElementById('vcModelo').value.trim();
+  const marca=document.getElementById('vcMarca').value.trim();
+  if(!placa){document.getElementById('vcPlaca').focus();return;}
+  if(!modelo){document.getElementById('vcModelo').focus();return;}
+  const btn=document.querySelector('#modalVeiculo .modal-footer .btn:last-child');
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Salvando...'; }
+  const restore=()=>{ if(btn){ btn.disabled=false; btn.innerHTML='<i class="bi bi-check2-circle me-1"></i>Cadastrar Veículo'; } };
+  try{
+    if(isAdmin()){
+      const r=await fetch('/api/frota',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({placa,modelo,marca})});
+      const d=await r.json();
+      if(!d.success){restore();showToast(d.error||'Erro.','danger');return;}
+      allFrota.push(d.veiculo); buildSidebarFrota(allFrota);
+      if(modalVeiculoBs) modalVeiculoBs.hide();
+      showToast(`Veículo ${placa} cadastrado!`,'success');
+    } else {
+      const r=await fetch('/api/solicitacoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:'veiculo',dados:{placa,modelo,marca}})});
+      if(r.status===401){window.location.href='/login';return;}
+      const d=await r.json();
+      if(!d.success){restore();showToast(d.error||'Erro.','danger');return;}
+      if(modalVeiculoBs) modalVeiculoBs.hide();
+      showToast('Veículo registrado. Aguardando autorização do administrador.','success');
+    }
+  }catch(e){ restore(); showToast('Sem conexão com o servidor.','danger'); }
+}
+
 /* ─── Autorizações (admin) ────────────────────────────────────────────── */
 let _autorizFiltro='pendente';
 function setAutorizFiltro(f,el){
@@ -1361,14 +1439,19 @@ function loadAutorizacoes(){
 }
 function estoqueDaPeca(id){ const p=allPecas.find(x=>x.id===id); return p?p.quantidade:'?'; }
 function cardAutoriz(s){
-  const cadastro=s.tipo==='cadastro', entrada=s.tipo==='entrada';
-  const cor=cadastro?'#7c3aed':entrada?'var(--brand-cyan)':'var(--brand-orange)';
-  const tituloTipo=cadastro?'🆕 Nova peça':entrada?'⬇ Entrada':'⬆ Saída';
+  const cadastro=s.tipo==='cadastro', entrada=s.tipo==='entrada', veiculo=s.tipo==='veiculo';
+  const cor=veiculo?'var(--brand-navy)':cadastro?'#7c3aed':entrada?'var(--brand-cyan)':'var(--brand-orange)';
+  const tituloTipo=veiculo?'🚚 Novo veículo':cadastro?'🆕 Nova peça':entrada?'⬇ Entrada':'⬆ Saída';
   const dt=new Date(s.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const d=s.dados||{};
   const fotoThumb=(s.fotos&&s.fotos.length)?`<img src="/fotos/${s.fotos[0]}" style="width:64px;height:50px;object-fit:cover;border-radius:6px;float:right;margin-left:8px" onerror="this.style.display='none'">`:'';
   let corpo;
-  if(cadastro){
+  if(veiculo){
+    corpo=`<b>Quem cadastrou:</b> ${s.solicitante_nome} · ${dt}<br>
+      <b>Placa:</b> ${d.placa||'—'} · <b>Modelo:</b> ${d.modelo||'—'}<br>
+      <b>Marca:</b> ${d.marca||'—'}
+      ${s.observacao?`<br><b>Obs:</b> ${s.observacao}`:''}`;
+  } else if(cadastro){
     corpo=`<b>Quem cadastrou:</b> ${s.solicitante_nome} · ${dt}<br>
       <b>Categoria:</b> ${d.categoria||'—'} · <b>Fabricante:</b> ${d.fabricante||'—'}<br>
       ${d.codigo?`<b>Código:</b> ${d.codigo}<br>`:''}
@@ -1381,11 +1464,12 @@ function cardAutoriz(s){
       <b>Quantidade:</b> ${s.quantidade_solicitada} · <b>Estoque atual:</b> <span class="fw-bold">${estoqueDaPeca(s.peca_id)}</span>
       ${s.observacao?`<br><b>Obs:</b> ${s.observacao}`:''}`;
   }
+  const btnAjustar=(veiculo)?'':`<button class="btn btn-sm fw-semibold text-white" style="background:var(--brand-orange)" onclick="ajustarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-pencil me-1"></i>Ajustar qtd</button>`;
   let acoes='';
   if(s.status==='pendente'){
     acoes=`<div class="d-flex gap-2 mt-2 flex-wrap">
       <button class="btn btn-sm fw-semibold text-white" style="background:#1a8a4a" onclick="aprovarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-check-lg me-1"></i>Autorizar</button>
-      <button class="btn btn-sm fw-semibold text-white" style="background:var(--brand-orange)" onclick="ajustarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-pencil me-1"></i>Ajustar qtd</button>
+      ${btnAjustar}
       <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="recusarSol('${s.id}')"><i class="bi bi-x-lg me-1"></i>Recusar</button>
     </div>`;
   } else if(s.status==='aprovada'){
@@ -1412,14 +1496,15 @@ async function _acaoSol(url,body,okMsg){
     const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
     const d=await r.json();
     if(d.success){
-      // recarrega o catálogo (cadastro cria peça nova; baixa/entrada mudam saldo)
+      // recarrega catálogo e frota (cadastro cria peça; veículo entra na frota; baixa/entrada mudam saldo)
       try{ const pr=await fetch('/api/pecas'); const pd=await pr.json(); if(pd.pecas) allPecas=pd.pecas; }catch(_){}
+      try{ const fr=await fetch('/api/frota'); const fd=await fr.json(); if(fd.frota){ allFrota=fd.frota; buildSidebarFrota(allFrota); } }catch(_){}
       showToast(okMsg,'success'); reloadStats(); loadAutorizacoes(); return true;
     }
     showToast(d.error||'Erro.','danger'); return false;
   }catch(e){ showToast('Sem conexão.','danger'); return false; }
 }
-function aprovarSol(id,qtd){ if(!confirm(`Autorizar e mover o estoque em ${qtd} un.?`)) return; _acaoSol(`/api/solicitacoes/${id}/aprovar`,{},'Autorizado.'); }
+function aprovarSol(id,qtd){ const msg=qtd>0?`Autorizar e mover o estoque em ${qtd} un.?`:'Autorizar este item?'; if(!confirm(msg)) return; _acaoSol(`/api/solicitacoes/${id}/aprovar`,{},'Autorizado.'); }
 function ajustarSol(id,sug){ const v=prompt('Quantidade autorizada:',sug); if(v===null) return; const q=parseInt(v); if(!Number.isInteger(q)||q<=0){showToast('Quantidade inválida','danger');return;} _acaoSol(`/api/solicitacoes/${id}/aprovar`,{quantidade_aprovada:q},`Autorizado (${q}).`); }
 function recusarSol(id){ const m=prompt('Motivo da recusa (obrigatório):'); if(m===null) return; if(!m.trim()){showToast('Motivo é obrigatório','danger');return;} _acaoSol(`/api/solicitacoes/${id}/recusar`,{motivo:m},'Recusado.'); }
 
@@ -1952,7 +2037,8 @@ function applyRole(){
   // Só admin: cadastrar peça, perfis, autorizações
   document.getElementById('navPerfisItem').style.display=admin?'':'none';
   document.getElementById('navAutorizacoesItem').style.display=admin?'':'none';
-  const bnp=document.getElementById('btnNovaPeca'); if(bnp) bnp.style.display=admin?'':'none';
+  const bnp=document.getElementById('btnNovaPeca'); if(bnp) bnp.style.display=oper?'':'none';
+  const bnv=document.getElementById('btnNovoVeiculo'); if(bnv) bnv.style.display=oper?'':'none';
   // Menu enxuto para operador/viewer: escondemos as telas de análise do admin.
   ['navDash','navPendentes','navFora','navMovs'].forEach(id=>{
     const a=document.getElementById(id); const li=a&&a.closest('li');

@@ -419,6 +419,20 @@ app.get('/api/frota', (req, res) => {
   res.json({ total: catalog.frota.length, frota: catalog.frota });
 });
 
+// Cadastro direto de veículo (só admin). Operação usa solicitação tipo 'veiculo'.
+app.post('/api/frota', ensureAdmin, (req, res) => {
+  const catalog = loadCatalog();
+  const { placa, modelo, marca } = req.body;
+  if (!placa || !modelo) return res.status(400).json({ error: 'Placa e modelo são obrigatórios' });
+  const pl = String(placa).toUpperCase().trim();
+  if ((catalog.frota || []).some(v => v.placa.toUpperCase() === pl))
+    return res.status(409).json({ error: 'Já existe um veículo com esta placa' });
+  const veiculo = { placa: pl, modelo: String(modelo).trim(), marca: (marca || '').trim() };
+  catalog.frota.push(veiculo);
+  saveCatalog(catalog);
+  res.json({ success: true, veiculo });
+});
+
 app.get('/api/frota/:placa/pecas', (req, res) => {
   const catalog = loadCatalog();
   const veiculo = catalog.frota.find(v => v.placa.toUpperCase() === req.params.placa.toUpperCase());
@@ -866,7 +880,33 @@ app.post('/api/solicitacoes', ensureOperacao, (req, res) => {
     return res.json({ success: true, solicitacao: sol });
   }
 
-  if (!['baixa', 'entrada'].includes(tipo)) return res.status(400).json({ error: "tipo deve ser 'baixa', 'entrada' ou 'cadastro'" });
+  // ── CADASTRO de veículo (vai para autorização; não entra na frota ainda) ──
+  if (tipo === 'veiculo') {
+    const dados = req.body.dados || {};
+    if (!dados.placa || !dados.modelo) return res.status(400).json({ error: 'Placa e modelo são obrigatórios' });
+    const catalog = loadCatalog();
+    const pl = String(dados.placa).toUpperCase().trim();
+    if ((catalog.frota || []).some(v => v.placa.toUpperCase() === pl))
+      return res.status(409).json({ error: 'Já existe um veículo com esta placa' });
+    if (!catalog.solicitacoes) catalog.solicitacoes = [];
+    const sol = {
+      id: nextSolId(catalog), tipo: 'veiculo', status: 'pendente',
+      peca_id: null, peca_nome: `${pl} — ${dados.modelo}`, peca_codigo: '',
+      placa: pl, quantidade_solicitada: 0, quantidade_aprovada: null,
+      observacao: observacao || '',
+      dados: { placa: pl, modelo: String(dados.modelo).trim(), marca: (dados.marca || '').trim() },
+      fotos: [],
+      solicitante_id: perfil.id, solicitante_nome: perfil.nome,
+      criado_em: new Date().toISOString(),
+      aprovado_por: null, aprovado_por_nome: null, aprovado_em: null, motivo_recusa: null
+    };
+    catalog.solicitacoes.push(sol);
+    saveCatalog(catalog);
+    registrarAuditoria(catalog, perfil, 'criar_solicitacao', 'solicitacao', sol.id, null, sol, req);
+    return res.json({ success: true, solicitacao: sol });
+  }
+
+  if (!['baixa', 'entrada'].includes(tipo)) return res.status(400).json({ error: "tipo deve ser 'baixa', 'entrada', 'cadastro' ou 'veiculo'" });
   const qty = parseInt(quantidade);
   if (!Number.isInteger(qty) || qty <= 0) return res.status(400).json({ error: 'quantidade deve ser inteiro positivo' });
 
@@ -938,6 +978,18 @@ app.post('/api/solicitacoes/:id/aprovar', ensureAdmin, (req, res) => {
     }
     const antes = JSON.parse(JSON.stringify(sol));
     try {
+      // ── VEÍCULO: adiciona à frota ──
+      if (sol.tipo === 'veiculo') {
+        const d = sol.dados || {};
+        const pl = String(d.placa).toUpperCase().trim();
+        if ((catalog.frota || []).some(v => v.placa.toUpperCase() === pl)) throw new Error('Já existe um veículo com esta placa');
+        catalog.frota.push({ placa: pl, modelo: d.modelo, marca: d.marca || '' });
+        sol.status = 'aprovada'; sol.aprovado_por = perfil.id; sol.aprovado_por_nome = perfil.nome; sol.aprovado_em = new Date().toISOString();
+        saveCatalog(catalog);
+        registrarAuditoria(catalog, perfil, 'aprovar_solicitacao', 'solicitacao', sol.id, antes, sol, req);
+        res.json({ success: true, solicitacao: sol });
+        return;
+      }
       // ── CADASTRO: cria a peça no catálogo (estoque inicial via livro-razão) ──
       if (sol.tipo === 'cadastro') {
         const d = sol.dados || {};
