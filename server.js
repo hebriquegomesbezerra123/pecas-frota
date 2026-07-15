@@ -194,7 +194,9 @@ function serializarEscrita(fn) {
 }
 // Aplica uma movimentação de estoque (entrada soma, saida subtrai) e registra o
 // histórico imutável em movimentacoes_estoque. NÃO valida permissão (quem chama valida).
-function aplicarMovimentacao(catalog, { peca_id, tipo, quantidade, solicitacao_id, usuario_id }) {
+// custo_unitario: entrada com custo atualiza o custo corrente da peça; saída sem custo
+// é valorizada pelo último custo conhecido (custo_unitario da peça, senão preco_referencia).
+function aplicarMovimentacao(catalog, { peca_id, tipo, quantidade, solicitacao_id, usuario_id, custo_unitario, placa, responsavel, observacoes }) {
   const idx = catalog.pecas.findIndex(p => p.id === peca_id);
   if (idx === -1) throw new Error('Peça não encontrada');
   const peca = catalog.pecas[idx];
@@ -203,16 +205,61 @@ function aplicarMovimentacao(catalog, { peca_id, tipo, quantidade, solicitacao_i
   const saldoNovo = saldoAnterior + delta;
   if (saldoNovo < 0) throw new Error(`Estoque insuficiente. Disponível: ${saldoAnterior}`);
   peca.quantidade = saldoNovo;
+  let custo = custo_unitario != null && custo_unitario !== '' ? Number(custo_unitario) : null;
+  if (custo == null || isNaN(custo)) {
+    custo = peca.custo_unitario != null ? Number(peca.custo_unitario)
+          : (peca.preco_referencia != null ? Number(peca.preco_referencia) : null);
+  }
+  if (tipo === 'entrada' && custo_unitario != null && custo_unitario !== '' && !isNaN(Number(custo_unitario))) {
+    peca.custo_unitario = Number(custo_unitario);
+  }
   if (!catalog.movimentacoes_estoque) catalog.movimentacoes_estoque = [];
   const mov = {
     id: 'ME' + String(catalog.movimentacoes_estoque.length + 1).padStart(4, '0'),
     peca_id, peca_nome: peca.nome, tipo, quantidade,
+    custo_unitario: custo,
+    valor_total: custo != null ? Math.round(custo * quantidade * 100) / 100 : null,
+    placa: placa || null, responsavel: responsavel || null, observacoes: observacoes || null,
     saldo_anterior: saldoAnterior, saldo_novo: saldoNovo,
     solicitacao_id: solicitacao_id || null, usuario_id: usuario_id || null,
     criado_em: new Date().toISOString()
   };
   catalog.movimentacoes_estoque.push(mov);
   return { mov, saldoNovo };
+}
+
+// Visão unificada do histórico: registros antigos (movimentacoes, só baixas manuais)
+// + livro-razão V3 (movimentacoes_estoque). Ordenado do mais antigo ao mais novo.
+function todasMovimentacoes(catalog) {
+  const sols = {};
+  (catalog.solicitacoes || []).forEach(s => { sols[s.id] = s; });
+  const perfis = {};
+  (catalog.perfis || []).forEach(p => { perfis[p.id] = p.nome; });
+  const legacy = (catalog.movimentacoes || []).map(m => ({
+    id: m.id, origem: 'registro antigo', tipo: 'saida',
+    peca_id: m.peca_id, peca_nome: m.peca_nome, peca_codigo: m.peca_codigo || '',
+    responsavel: m.responsavel || '', veiculo: m.veiculo || '',
+    quantidade: m.quantidade, custo_unitario: null, valor_total: null,
+    aprovado_por: '', observacoes: m.observacoes || '',
+    data: m.data, criado_em: m.criado_em || ((m.data || '') + 'T12:00:00.000Z')
+  }));
+  const razao = (catalog.movimentacoes_estoque || []).map(m => {
+    const s = m.solicitacao_id ? sols[m.solicitacao_id] : null;
+    return {
+      id: m.id, origem: m.solicitacao_id ? 'autorizada' : 'direta',
+      tipo: m.tipo === 'entrada' ? 'entrada' : 'saida',
+      peca_id: m.peca_id, peca_nome: m.peca_nome, peca_codigo: (s && s.peca_codigo) || '',
+      responsavel: m.responsavel || (s && s.solicitante_nome) || perfis[m.usuario_id] || '',
+      veiculo: m.placa || (s && s.placa) || '',
+      quantidade: m.quantidade,
+      custo_unitario: m.custo_unitario != null ? m.custo_unitario : null,
+      valor_total: m.valor_total != null ? m.valor_total : null,
+      aprovado_por: perfis[m.usuario_id] || '',
+      observacoes: m.observacoes || (s && s.observacao) || '',
+      data: (m.criado_em || '').substring(0, 10), criado_em: m.criado_em
+    };
+  });
+  return legacy.concat(razao).sort((a, b) => (a.criado_em || '').localeCompare(b.criado_em || ''));
 }
 function seedPerfis() {
   const catalog = loadCatalog();
@@ -368,7 +415,7 @@ app.get('/api/pecas/:id', (req, res) => {
 
 app.post('/api/pecas', ensureAdmin, (req, res) => {
   const catalog = loadCatalog();
-  const { nome, codigo, fabricante, categoria, descricao, veiculos_compativeis, quantidade, pendente_analise, observacoes } = req.body;
+  const { nome, codigo, fabricante, categoria, descricao, veiculos_compativeis, quantidade, pendente_analise, observacoes, custo_unitario, estoque_minimo, preco_referencia } = req.body;
   if (!nome || !categoria) return res.status(400).json({ error: 'Nome e categoria são obrigatórios' });
   const maxNum = catalog.pecas.reduce((m, p) => { const n = parseInt(p.id); return n > m ? n : m; }, 0);
   const peca = {
@@ -380,6 +427,9 @@ app.post('/api/pecas', ensureAdmin, (req, res) => {
     pendente_analise: !!pendente_analise,
     observacoes: observacoes || '', fotos: []
   };
+  if (custo_unitario != null && !isNaN(Number(custo_unitario))) peca.custo_unitario = Number(custo_unitario);
+  if (estoque_minimo != null && !isNaN(parseInt(estoque_minimo))) peca.estoque_minimo = parseInt(estoque_minimo);
+  if (preco_referencia != null && !isNaN(Number(preco_referencia))) peca.preco_referencia = Number(preco_referencia);
   catalog.pecas.push(peca);
   saveCatalog(catalog);
   res.json({ success: true, peca });
@@ -391,13 +441,13 @@ app.put('/api/pecas/:id', (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Peça não encontrada' });
   const perfil = getPerfilFromReq(req);
   const isAdmin = perfil && perfil.papel === 'admin';
-  // 'quantidade' e 'estoque_minimo' são estoque: só admin altera direto.
-  let allowed = ['observacoes','pendente_analise','nome','descricao','codigo','fabricante','categoria','veiculos_compativeis','preco_referencia','estoque_minimo','foto_url','codigo_fornecedor'];
-  if (isAdmin) allowed = allowed.concat(['quantidade']);
-  if (req.body.quantidade !== undefined && !isAdmin)
-    return res.status(403).json({ error: 'Alteração de estoque exige aprovação do administrador.' });
+  // Operador não altera cadastro direto: envia solicitação tipo 'alteracao' para aprovação.
+  if (!isAdmin)
+    return res.status(403).json({ error: 'Alterações de cadastro exigem aprovação do administrador. Use "Solicitar alteração".' });
+  const allowed = ['observacoes','pendente_analise','nome','descricao','codigo','fabricante','categoria','veiculos_compativeis','preco_referencia','custo_unitario','estoque_minimo','foto_url','codigo_fornecedor','quantidade'];
   allowed.forEach(f => { if (req.body[f] !== undefined) catalog.pecas[idx][f] = req.body[f]; });
   saveCatalog(catalog);
+  registrarAuditoria(catalog, perfil, 'editar_peca', 'peca', catalog.pecas[idx].id, null, { nome: catalog.pecas[idx].nome }, req);
   res.json({ success: true, peca: catalog.pecas[idx] });
 });
 
@@ -469,7 +519,8 @@ app.get('/api/stats', (req, res) => {
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 app.get('/api/dashboard', (req, res) => {
   const catalog = loadCatalog();
-  const movs  = catalog.movimentacoes || [];
+  // baixas = saídas do histórico unificado (registros antigos + livro-razão V3)
+  const movs  = todasMovimentacoes(catalog).filter(m => m.tipo === 'saida');
   const pecas = catalog.pecas;
 
   // Movimentações por veículo (quantidade total retirada)
@@ -516,36 +567,39 @@ app.get('/api/dashboard', (req, res) => {
 // ─── MOVIMENTAÇÕES ────────────────────────────────────────────────────────────
 app.get('/api/movimentacoes', (req, res) => {
   const catalog = loadCatalog();
-  res.json({ total: (catalog.movimentacoes||[]).length, movimentacoes: (catalog.movimentacoes||[]).slice().reverse() });
+  const movs = todasMovimentacoes(catalog).reverse();
+  res.json({ total: movs.length, movimentacoes: movs });
 });
 
 app.get('/api/movimentacoes/peca/:pecaId', (req, res) => {
   const catalog = loadCatalog();
-  const movs = (catalog.movimentacoes||[]).filter(m => m.peca_id === req.params.pecaId).slice().reverse();
+  const movs = todasMovimentacoes(catalog).filter(m => m.peca_id === req.params.pecaId).reverse();
   res.json({ total: movs.length, movimentacoes: movs });
 });
 
+// Baixa direta do admin — vai para o MESMO livro-razão das aprovações (com valor).
 app.post('/api/movimentacoes', ensureAdmin, (req, res) => {
-  const catalog = loadCatalog();
-  if (!catalog.movimentacoes) catalog.movimentacoes = [];
-  const { peca_id, responsavel, veiculo, quantidade, data, observacoes } = req.body;
-  if (!peca_id || !responsavel || !quantidade) return res.status(400).json({ error: 'peca_id, responsavel e quantidade são obrigatórios' });
-  const idx = catalog.pecas.findIndex(p => p.id === peca_id);
-  if (idx === -1) return res.status(404).json({ error: 'Peça não encontrada' });
-  const peca = catalog.pecas[idx];
-  const qty  = parseInt(quantidade);
-  if (peca.quantidade < qty) return res.status(400).json({ error: `Estoque insuficiente. Disponível: ${peca.quantidade}` });
-  const mov = {
-    id: 'MOV' + String(catalog.movimentacoes.length + 1).padStart(4, '0'),
-    peca_id, peca_nome: peca.nome, peca_codigo: peca.codigo,
-    responsavel, veiculo: veiculo || '', quantidade: qty,
-    data: data || new Date().toISOString().split('T')[0],
-    observacoes: observacoes || '', criado_em: new Date().toISOString()
-  };
-  catalog.movimentacoes.push(mov);
-  catalog.pecas[idx].quantidade -= qty;
-  saveCatalog(catalog);
-  res.json({ success: true, movimentacao: mov, nova_quantidade: catalog.pecas[idx].quantidade });
+  const perfil = getPerfilFromReq(req);
+  serializarEscrita(() => {
+    const catalog = loadCatalog();
+    const { peca_id, responsavel, veiculo, quantidade, observacoes } = req.body;
+    if (!peca_id || !responsavel || !quantidade) { res.status(400).json({ error: 'peca_id, responsavel e quantidade são obrigatórios' }); return; }
+    const qty = parseInt(quantidade);
+    if (!Number.isInteger(qty) || qty <= 0) { res.status(400).json({ error: 'quantidade deve ser inteiro positivo' }); return; }
+    try {
+      const { mov, saldoNovo } = aplicarMovimentacao(catalog, {
+        peca_id, tipo: 'saida', quantidade: qty,
+        usuario_id: perfil ? perfil.id : null,
+        placa: veiculo ? String(veiculo).trim().split(' ')[0].toUpperCase() : null,
+        responsavel, observacoes: observacoes || ''
+      });
+      saveCatalog(catalog);
+      registrarAuditoria(catalog, perfil, 'baixa_direta', 'movimentacao', mov.id, null, mov, req);
+      res.json({ success: true, movimentacao: mov, nova_quantidade: saldoNovo });
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  }).catch(e => { if (!res.headersSent) res.status(500).json({ error: e.message }); });
 });
 
 // ─── DIAGNÓSTICO ─────────────────────────────────────────────────────────
@@ -722,11 +776,21 @@ app.get('/api/resumo', (req, res) => {
   try {
     const c = loadCatalog();
     const pecas = c.pecas || [];
+    const minimo = p => (p.estoque_minimo != null ? p.estoque_minimo : 2);
+    const mesAtual = new Date().toISOString().substring(0, 7);
+    const movsMes = todasMovimentacoes(c).filter(m => (m.data || '').substring(0, 7) === mesAtual).length;
     res.json({
       total_itens:       pecas.length,
       total_unidades:    pecas.reduce((s, p) => s + (p.quantidade || 0), 0),
       pendentes_analise: pecas.filter(p => p.pendente_analise).length,
       veiculos:          (c.frota || []).length,
+      // KPIs do Painel Bolsão (contagens apenas — sem valores R$ em rota pública)
+      total_pecas:       pecas.length,
+      sem_estoque:       pecas.filter(p => (p.quantidade || 0) === 0).length,
+      estoque_baixo:     pecas.filter(p => (p.quantidade || 0) > 0 && (p.quantidade || 0) <= minimo(p)).length,
+      total_frota:       (c.frota || []).length,
+      movimentacoes_mes: movsMes,
+      pendentes_autorizacao: (c.solicitacoes || []).filter(s => s.status === 'pendente').length,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -829,10 +893,11 @@ app.post('/login', (req, res) => {
 // Export CSV movimentações
 app.get('/api/movimentacoes/export', (req, res) => {
   const catalog = loadCatalog();
-  const movs = (catalog.movimentacoes || []).slice().reverse();
+  const movs = todasMovimentacoes(catalog).reverse();
   const esc = s => '"' + String(s || '').replace(/"/g, '""') + '"';
-  const hdr = ['ID','Data','Peca','Codigo','Responsavel','Veiculo','Quantidade','Observacoes'].join(',');
-  const rows = movs.map(m => [m.id, m.data, esc(m.peca_nome), esc(m.peca_codigo), esc(m.responsavel), esc(m.veiculo), m.quantidade, esc(m.observacoes)].join(','));
+  const num = v => v == null ? '' : String(v).replace('.', ',');
+  const hdr = ['ID','Data','Tipo','Peca','Codigo','Responsavel','Veiculo','Quantidade','Custo Unit (R$)','Valor Total (R$)','Autorizado por','Observacoes'].join(';');
+  const rows = movs.map(m => [m.id, m.data, m.tipo === 'entrada' ? 'Entrada' : 'Saida', esc(m.peca_nome), esc(m.peca_codigo), esc(m.responsavel), esc(m.veiculo), m.quantidade, num(m.custo_unitario), num(m.valor_total), esc(m.aprovado_por), esc(m.observacoes)].join(';'));
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="movimentacoes_' + new Date().toISOString().split('T')[0] + '.csv"');
   res.send('\ufeff' + [hdr, ...rows].join('\r\n'));
@@ -868,9 +933,44 @@ app.post('/api/solicitacoes', ensureOperacao, (req, res) => {
         categoria: dados.categoria, descricao: dados.descricao || '',
         veiculos_compativeis: Array.isArray(dados.veiculos_compativeis) ? dados.veiculos_compativeis : [],
         quantidade: parseInt(dados.quantidade) || 0, observacoes: dados.observacoes || '',
-        preco_referencia: dados.preco_referencia != null ? Number(dados.preco_referencia) : undefined
+        preco_referencia: dados.preco_referencia != null ? Number(dados.preco_referencia) : undefined,
+        custo_unitario: dados.custo_unitario != null && !isNaN(Number(dados.custo_unitario)) ? Number(dados.custo_unitario) : undefined,
+        estoque_minimo: dados.estoque_minimo != null && !isNaN(parseInt(dados.estoque_minimo)) ? parseInt(dados.estoque_minimo) : undefined
       },
       fotos: Array.isArray(req.body.fotos) ? req.body.fotos : [],
+      solicitante_id: perfil.id, solicitante_nome: perfil.nome,
+      criado_em: new Date().toISOString(),
+      aprovado_por: null, aprovado_por_nome: null, aprovado_em: null, motivo_recusa: null
+    };
+    catalog.solicitacoes.push(sol);
+    saveCatalog(catalog);
+    registrarAuditoria(catalog, perfil, 'criar_solicitacao', 'solicitacao', sol.id, null, sol, req);
+    return res.json({ success: true, solicitacao: sol });
+  }
+
+  // ── ALTERAÇÃO de cadastro de peça (vai para autorização; só grava depois do OK) ──
+  if (tipo === 'alteracao') {
+    const dados = req.body.dados || {};
+    const catalog = loadCatalog();
+    const peca = (catalog.pecas || []).find(p => p.id === req.body.peca_id);
+    if (!peca) return res.status(404).json({ error: 'Peça não encontrada' });
+    // Campos de cadastro permitidos (estoque NUNCA muda por aqui — só baixa/entrada)
+    const CAMPOS_ALTERACAO = ['nome','codigo','fabricante','categoria','descricao','observacoes','veiculos_compativeis','preco_referencia','custo_unitario','estoque_minimo','pendente_analise'];
+    const mudancas = {}, antes = {};
+    CAMPOS_ALTERACAO.forEach(f => {
+      if (dados[f] === undefined) return;
+      const atual = peca[f] === undefined ? null : peca[f];
+      if (JSON.stringify(dados[f]) !== JSON.stringify(atual)) { mudancas[f] = dados[f]; antes[f] = atual; }
+    });
+    if (!Object.keys(mudancas).length) return res.status(400).json({ error: 'Nenhuma alteração em relação ao cadastro atual.' });
+    if (!catalog.solicitacoes) catalog.solicitacoes = [];
+    const sol = {
+      id: nextSolId(catalog), tipo: 'alteracao', status: 'pendente',
+      peca_id: peca.id, peca_nome: peca.nome, peca_codigo: peca.codigo || '',
+      placa: null, quantidade_solicitada: 0, quantidade_aprovada: null,
+      observacao: observacao || '',
+      dados: mudancas, dados_antes: antes,
+      fotos: [],
       solicitante_id: perfil.id, solicitante_nome: perfil.nome,
       criado_em: new Date().toISOString(),
       aprovado_por: null, aprovado_por_nome: null, aprovado_em: null, motivo_recusa: null
@@ -907,7 +1007,7 @@ app.post('/api/solicitacoes', ensureOperacao, (req, res) => {
     return res.json({ success: true, solicitacao: sol });
   }
 
-  if (!['baixa', 'entrada'].includes(tipo)) return res.status(400).json({ error: "tipo deve ser 'baixa', 'entrada', 'cadastro' ou 'veiculo'" });
+  if (!['baixa', 'entrada'].includes(tipo)) return res.status(400).json({ error: "tipo deve ser 'baixa', 'entrada', 'cadastro', 'veiculo' ou 'alteracao'" });
   const qty = parseInt(quantidade);
   if (!Number.isInteger(qty) || qty <= 0) return res.status(400).json({ error: 'quantidade deve ser inteiro positivo' });
 
@@ -991,6 +1091,18 @@ app.post('/api/solicitacoes/:id/aprovar', ensureAdmin, (req, res) => {
         res.json({ success: true, solicitacao: sol });
         return;
       }
+      // ── ALTERAÇÃO: aplica os campos aprovados na peça ──
+      if (sol.tipo === 'alteracao') {
+        const idxP = catalog.pecas.findIndex(p => p.id === sol.peca_id);
+        if (idxP === -1) throw new Error('Peça não existe mais no catálogo');
+        const CAMPOS_ALTERACAO = ['nome','codigo','fabricante','categoria','descricao','observacoes','veiculos_compativeis','preco_referencia','custo_unitario','estoque_minimo','pendente_analise'];
+        CAMPOS_ALTERACAO.forEach(f => { if (sol.dados && sol.dados[f] !== undefined) catalog.pecas[idxP][f] = sol.dados[f]; });
+        sol.status = 'aprovada'; sol.aprovado_por = perfil.id; sol.aprovado_por_nome = perfil.nome; sol.aprovado_em = new Date().toISOString();
+        saveCatalog(catalog);
+        registrarAuditoria(catalog, perfil, 'aprovar_solicitacao', 'solicitacao', sol.id, antes, sol, req);
+        res.json({ success: true, solicitacao: sol, peca: catalog.pecas[idxP] });
+        return;
+      }
       // ── CADASTRO: cria a peça no catálogo (estoque inicial via livro-razão) ──
       if (sol.tipo === 'cadastro') {
         const d = sol.dados || {};
@@ -1004,8 +1116,10 @@ app.post('/api/solicitacoes/:id/aprovar', ensureAdmin, (req, res) => {
           fotos: Array.isArray(sol.fotos) ? sol.fotos : []
         };
         if (d.preco_referencia != null) nova.preco_referencia = Number(d.preco_referencia);
+        if (d.custo_unitario != null) nova.custo_unitario = Number(d.custo_unitario);
+        if (d.estoque_minimo != null) nova.estoque_minimo = parseInt(d.estoque_minimo);
         catalog.pecas.push(nova);
-        if (qty > 0) aplicarMovimentacao(catalog, { peca_id: nova.id, tipo: 'entrada', quantidade: qty, solicitacao_id: sol.id, usuario_id: perfil.id });
+        if (qty > 0) aplicarMovimentacao(catalog, { peca_id: nova.id, tipo: 'entrada', quantidade: qty, solicitacao_id: sol.id, usuario_id: perfil.id, custo_unitario: d.custo_unitario });
         sol.status = 'aprovada'; sol.quantidade_aprovada = qty; sol.peca_id = nova.id;
         sol.aprovado_por = perfil.id; sol.aprovado_por_nome = perfil.nome; sol.aprovado_em = new Date().toISOString();
         saveCatalog(catalog);
@@ -1016,7 +1130,10 @@ app.post('/api/solicitacoes/:id/aprovar', ensureAdmin, (req, res) => {
       const { saldoNovo } = aplicarMovimentacao(catalog, {
         peca_id: sol.peca_id,
         tipo: sol.tipo === 'entrada' ? 'entrada' : 'saida',
-        quantidade: qty, solicitacao_id: sol.id, usuario_id: perfil.id
+        quantidade: qty, solicitacao_id: sol.id, usuario_id: perfil.id,
+        custo_unitario: sol.tipo === 'entrada' ? sol.custo_unitario : null,
+        placa: sol.placa || null, responsavel: sol.solicitante_nome || null,
+        observacoes: sol.observacao || null
       });
       sol.status = 'aprovada';
       sol.quantidade_aprovada = qty;
@@ -1059,6 +1176,7 @@ function registrarAuditoria(catalog, perfil, acao, entidade, entidade_id, antes,
       usuario_id: perfil ? perfil.id : null, usuario_nome: perfil ? perfil.nome : null,
       acao, entidade, entidade_id, dados_antes: antes, dados_depois: depois,
       ip: req ? ((req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0]).trim() : null,
+      user_agent: req ? String(req.headers['user-agent'] || '').slice(0, 200) : null,
       criado_em: new Date().toISOString()
     });
     saveCatalog(catalog);
@@ -1067,6 +1185,90 @@ function registrarAuditoria(catalog, perfil, acao, entidade, entidade_id, antes,
 app.get('/api/auditoria', ensureAdmin, (req, res) => {
   const catalog = loadCatalog();
   res.json({ total: (catalog.auditoria || []).length, auditoria: (catalog.auditoria || []).slice().reverse().slice(0, 500) });
+});
+
+// ─── RELATÓRIOS (admin) — totais por semana e por mês, em quantidade e R$ ──────
+app.get('/api/relatorios', ensureAdmin, (req, res) => {
+  const catalog = loadCatalog();
+  const movs = todasMovimentacoes(catalog);
+  // fallback de valor: movimentos antigos sem custo usam o custo atual da peça
+  const custoPeca = {};
+  (catalog.pecas || []).forEach(p => {
+    custoPeca[p.id] = p.custo_unitario != null ? Number(p.custo_unitario)
+                    : (p.preco_referencia != null ? Number(p.preco_referencia) : 0);
+  });
+  const valorDe = m => m.valor_total != null ? m.valor_total
+    : m.quantidade * (m.custo_unitario != null ? m.custo_unitario : (custoPeca[m.peca_id] || 0));
+
+  const hoje = new Date();
+  const dia = d => d.toISOString().substring(0, 10);
+  // início da semana (segunda-feira)
+  function inicioSemana(d) {
+    const x = new Date(d); const dow = (x.getDay() + 6) % 7;
+    x.setDate(x.getDate() - dow); x.setHours(0, 0, 0, 0); return x;
+  }
+  const fmtDM = d => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+
+  function bucketVazio() { return { saidas_qtd: 0, saidas_valor: 0, entradas_qtd: 0, entradas_valor: 0 }; }
+  function soma(bucket, m) {
+    const v = valorDe(m);
+    if (m.tipo === 'entrada') { bucket.entradas_qtd += m.quantidade; bucket.entradas_valor += v; }
+    else { bucket.saidas_qtd += m.quantidade; bucket.saidas_valor += v; }
+  }
+  const r2 = o => { ['saidas_valor', 'entradas_valor'].forEach(k => o[k] = Math.round(o[k] * 100) / 100); return o; };
+
+  // últimas 8 semanas e últimos 6 meses (sempre presentes, mesmo zerados)
+  const semanas = [];
+  for (let i = 7; i >= 0; i--) {
+    const ini = inicioSemana(new Date(hoje.getTime() - i * 7 * 86400000));
+    const fim = new Date(ini.getTime() + 6 * 86400000);
+    semanas.push({ inicio: dia(ini), fim: dia(fim), label: fmtDM(ini) + ' a ' + fmtDM(fim), ...bucketVazio() });
+  }
+  const meses = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    meses.push({ mes: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }), ...bucketVazio() });
+  }
+
+  const topPecasMes = {}, porVeiculoMes = {};
+  const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+  movs.forEach(m => {
+    const dataM = m.data || (m.criado_em || '').substring(0, 10);
+    if (!dataM) return;
+    semanas.forEach(s => { if (dataM >= s.inicio && dataM <= s.fim) soma(s, m); });
+    const mesM = dataM.substring(0, 7);
+    const mm = meses.find(x => x.mes === mesM);
+    if (mm) soma(mm, m);
+    if (m.tipo === 'saida' && mesM === mesAtual) {
+      // agrupa por ID (nome pode mudar com o tempo); exibe o nome atual da peça
+      const chave = m.peca_id || m.peca_nome;
+      const tp = topPecasMes[chave] || (topPecasMes[chave] = { qtd: 0, valor: 0, nome: null });
+      const atual = (catalog.pecas || []).find(p => p.id === m.peca_id);
+      tp.nome = (atual && atual.nome) || m.peca_nome;
+      tp.qtd += m.quantidade; tp.valor += valorDe(m);
+      const veic = m.veiculo || 'Sem veículo';
+      const pv = porVeiculoMes[veic] || (porVeiculoMes[veic] = { qtd: 0, valor: 0 });
+      pv.qtd += m.quantidade; pv.valor += valorDe(m);
+    }
+  });
+  semanas.forEach(r2); meses.forEach(r2);
+
+  const top_pecas_mes = Object.values(topPecasMes)
+    .sort((a, b) => b.valor - a.valor || b.qtd - a.qtd).slice(0, 10)
+    .map(v => ({ nome: v.nome, qtd: v.qtd, valor: Math.round(v.valor * 100) / 100 }));
+  const por_veiculo_mes = Object.entries(porVeiculoMes)
+    .sort((a, b) => b[1].valor - a[1].valor || b[1].qtd - a[1].qtd)
+    .map(([veiculo, v]) => ({ veiculo, qtd: v.qtd, valor: Math.round(v.valor * 100) / 100 }));
+
+  res.json({
+    semana_atual: semanas[semanas.length - 1],
+    mes_atual: meses[meses.length - 1],
+    por_semana: semanas.slice().reverse(),
+    por_mes: meses.slice().reverse(),
+    top_pecas_mes, por_veiculo_mes,
+    gerado_em: new Date().toISOString()
+  });
 });
 
 // (A antiga tela /admin foi integrada ao sistema principal — aba "Autorizações".)

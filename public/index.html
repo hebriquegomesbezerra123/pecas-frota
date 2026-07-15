@@ -194,11 +194,24 @@
           <span class="sidebar-text ms-2">Movimentações</span>
         </a>
       </li>
+      <li id="navMinhasItem" style="display:none">
+        <a class="nav-link" id="navMinhas" onclick="setView('minhas')">
+          <i class="bi bi-inbox nav-icon"></i>
+          <span class="sidebar-text ms-2">Minhas Solicitações</span>
+          <span class="badge ms-auto sidebar-text" id="badgeMinhas" style="background:var(--brand-orange);display:none">0</span>
+        </a>
+      </li>
       <li id="navAutorizacoesItem" style="display:none">
         <a class="nav-link" id="navAutorizacoes" onclick="setView('autorizacoes')">
           <i class="bi bi-check2-square nav-icon"></i>
           <span class="sidebar-text ms-2">Autorizações</span>
           <span class="badge ms-auto sidebar-text" id="badgePendAutoriz" style="background:var(--brand-orange);display:none">0</span>
+        </a>
+      </li>
+      <li id="navRelatoriosItem" style="display:none">
+        <a class="nav-link" id="navRelatorios" onclick="setView('relatorios')">
+          <i class="bi bi-cash-coin nav-icon"></i>
+          <span class="sidebar-text ms-2">Relatórios</span>
         </a>
       </li>
       <li id="navAtividadeItem" style="display:none">
@@ -515,12 +528,71 @@
           </div>
         </div>
         <div class="alert alert-info border-0 shadow-sm small mb-3"><i class="bi bi-info-circle me-1"></i>Nada entra ou sai do estoque sem a sua autorização. Baixas e entradas registradas pela equipe aparecem aqui.</div>
-        <ul class="nav nav-pills mb-3 gap-1" id="autorizTabs">
+        <ul class="nav nav-pills mb-2 gap-1" id="autorizTabs">
           <li class="nav-item"><a class="nav-link active" data-af="pendente" onclick="setAutorizFiltro('pendente',this)">Pendentes <span class="badge bg-light text-dark ms-1" id="cntPend">0</span></a></li>
           <li class="nav-item"><a class="nav-link" data-af="aprovada" onclick="setAutorizFiltro('aprovada',this)">Autorizadas</a></li>
           <li class="nav-item"><a class="nav-link" data-af="recusada" onclick="setAutorizFiltro('recusada',this)">Recusadas</a></li>
         </ul>
+        <div class="d-flex gap-1 flex-wrap mb-3" id="autorizTipoTabs">
+          <button class="btn btn-sm btn-outline-secondary active" data-at="" onclick="setAutorizTipo('',this)">Todas</button>
+          <button class="btn btn-sm btn-outline-secondary" data-at="baixa" onclick="setAutorizTipo('baixa',this)">⬆ Saídas</button>
+          <button class="btn btn-sm btn-outline-secondary" data-at="entrada" onclick="setAutorizTipo('entrada',this)">⬇ Entradas</button>
+          <button class="btn btn-sm btn-outline-secondary" data-at="cadastro" onclick="setAutorizTipo('cadastro',this)">🆕 Peças</button>
+          <button class="btn btn-sm btn-outline-secondary" data-at="veiculo" onclick="setAutorizTipo('veiculo',this)">🚚 Veículos</button>
+          <button class="btn btn-sm btn-outline-secondary" data-at="alteracao" onclick="setAutorizTipo('alteracao',this)">✏️ Alterações</button>
+        </div>
         <div id="autorizList" class="row g-3"></div>
+      </div>
+
+      <!-- ── MINHAS SOLICITAÇÕES (operador) ── -->
+      <div id="viewMinhas" style="display:none">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <h4 class="fw-bold mb-0"><i class="bi bi-inbox me-2 text-primary"></i>Minhas Solicitações</h4>
+          <button class="btn btn-sm btn-outline-secondary" onclick="loadMinhas()"><i class="bi bi-arrow-clockwise me-1"></i>Atualizar</button>
+        </div>
+        <div class="alert alert-info border-0 shadow-sm small mb-3"><i class="bi bi-info-circle me-1"></i>Acompanhe aqui o que você pediu: pendente, autorizado ou recusado (com o motivo).</div>
+        <div id="minhasList" class="row g-3"></div>
+      </div>
+
+      <!-- ── RELATÓRIOS (admin) ── -->
+      <div id="viewRelatorios" style="display:none">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <h4 class="fw-bold mb-0"><i class="bi bi-cash-coin me-2 text-primary"></i>Relatórios de Estoque e Gastos</h4>
+          <div class="d-flex gap-2">
+            <a href="/api/movimentacoes/export" class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Exportar Excel (CSV)</a>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadRelatorios()"><i class="bi bi-arrow-clockwise me-1"></i>Atualizar</button>
+          </div>
+        </div>
+        <div class="alert alert-info border-0 shadow-sm small mb-3"><i class="bi bi-info-circle me-1"></i>Quanto saiu e entrou de peça, em quantidade e em R$ (pelo custo cadastrado). Semana fecha na segunda-feira.</div>
+        <div class="row g-3 mb-3" id="relResumo"></div>
+        <div class="row g-3 mb-3">
+          <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+              <div class="card-header py-2 px-3"><span class="fw-semibold small"><i class="bi bi-calendar-week me-1 text-primary"></i>Por Semana (últimas 8)</span></div>
+              <div class="card-body p-0" id="relSemanas"></div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+              <div class="card-header py-2 px-3"><span class="fw-semibold small"><i class="bi bi-calendar3 me-1 text-primary"></i>Por Mês (últimos 6)</span></div>
+              <div class="card-body p-0" id="relMeses"></div>
+            </div>
+          </div>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+              <div class="card-header py-2 px-3"><span class="fw-semibold small"><i class="bi bi-trophy me-1 text-primary"></i>Peças que mais saíram no mês (R$)</span></div>
+              <div class="card-body p-0" id="relTopPecas"></div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+              <div class="card-header py-2 px-3"><span class="fw-semibold small"><i class="bi bi-truck me-1 text-primary"></i>Gasto por veículo no mês</span></div>
+              <div class="card-body p-0" id="relVeiculos"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ── ATIVIDADE ── -->
@@ -687,6 +759,19 @@
             <input type="number" class="form-control" id="npQtd" min="0" value="1">
           </div>
           <div class="col-md-6">
+            <label class="form-label">Custo da peça (R$)</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input type="number" class="form-control" id="npCusto" min="0" step="0.01" placeholder="0,00">
+            </div>
+            <div class="form-text">Quanto custou a peça comprada — entra nos relatórios de gastos.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Estoque mínimo</label>
+            <input type="number" class="form-control" id="npMinimo" min="0" placeholder="Ex: 2">
+            <div class="form-text">Abaixo disso a peça conta como "estoque baixo".</div>
+          </div>
+          <div class="col-md-6">
             <label class="form-label">Código / Referência</label>
             <input type="text" class="form-control" id="npCodigo" placeholder="Ex: A 000 477 99 15">
           </div>
@@ -788,7 +873,7 @@
             <input type="date" class="form-control" id="bxData">
           </div>
           <div class="col-12">
-            <label class="form-label">Observações</label>
+            <label class="form-label">Motivo da retirada / Observações</label>
             <textarea class="form-control" id="bxObs" rows="2" placeholder="Ex: Manutenção preventiva..."></textarea>
           </div>
         </div>
@@ -1103,8 +1188,8 @@ function updateVehicleFilterUI(){
 }
 
 /* ─── Views ───────────────────────────────────────────────────────────── */
-const VIEWS=['dashboard','todas','veiculos','pendentes','fora','movimentacoes','autorizacoes','atividade','perfis'];
-const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações',autorizacoes:'Autorizações',atividade:'Atividade',perfis:'Perfis de Acesso'};
+const VIEWS=['dashboard','todas','veiculos','pendentes','fora','movimentacoes','minhas','autorizacoes','relatorios','atividade','perfis'];
+const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações',minhas:'Minhas Solicitações',autorizacoes:'Autorizações',relatorios:'Relatórios',atividade:'Atividade',perfis:'Perfis de Acesso'};
 function isAdmin(){ return currentUser && currentUser.papel==='admin'; }
 function canOperar(){ return currentUser && (currentUser.papel==='admin' || currentUser.papel==='operacao'); }
 
@@ -1122,6 +1207,8 @@ function setView(v){
   if(v==='movimentacoes') loadTodasMovimentacoes();
   if(v==='dashboard')  loadDashboard();
   if(v==='autorizacoes') loadAutorizacoes();
+  if(v==='minhas')     loadMinhas();
+  if(v==='relatorios') loadRelatorios();
   if(v==='atividade')  loadAtividade();
   if(v==='perfis')     loadPerfis();
   if(v!=='movimentacoes') _movsCache=null;
@@ -1262,9 +1349,9 @@ function loadHistorico(id){
   const pecaId=id||currentId; if(!pecaId) return;
   fetch(`/api/movimentacoes/peca/${pecaId}`).then(r=>r.json()).then(d=>{
     const el=document.getElementById('historicoResult');
-    if(!d.movimentacoes||!d.movimentacoes.length){el.innerHTML='<span class="text-muted small">Nenhuma baixa registrada.</span>';return;}
-    el.innerHTML=`<table class="table table-sm table-hover mb-0"><thead><tr style="font-size:.7rem;text-transform:uppercase;color:#8a92b2"><th>Data</th><th>Responsável</th><th>Veículo</th><th class="text-center">Qtd</th><th>Obs</th></tr></thead><tbody>
-      ${d.movimentacoes.map(m=>`<tr class="hist-row"><td>${new Date(m.data+'T12:00:00').toLocaleDateString('pt-BR')}</td><td class="fw-semibold">${m.responsavel}</td><td>${m.veiculo||'—'}</td><td class="text-center"><span class="badge" style="background:var(--brand-orange)">${m.quantidade}</span></td><td class="text-muted">${m.observacoes||''}</td></tr>`).join('')}
+    if(!d.movimentacoes||!d.movimentacoes.length){el.innerHTML='<span class="text-muted small">Nenhuma movimentação registrada.</span>';return;}
+    el.innerHTML=`<table class="table table-sm table-hover mb-0"><thead><tr style="font-size:.7rem;text-transform:uppercase;color:#8a92b2"><th>Data</th><th>Tipo</th><th>Responsável</th><th>Veículo</th><th class="text-center">Qtd</th><th>Obs</th></tr></thead><tbody>
+      ${d.movimentacoes.map(m=>`<tr class="hist-row"><td>${new Date((m.data||'')+'T12:00:00').toLocaleDateString('pt-BR')}</td><td>${m.tipo==='entrada'?'<span class="badge" style="background:var(--brand-cyan)">⬇</span>':'<span class="badge" style="background:var(--brand-orange)">⬆</span>'}</td><td class="fw-semibold">${m.responsavel||'—'}</td><td>${m.veiculo||'—'}</td><td class="text-center"><span class="badge" style="background:${m.tipo==='entrada'?'var(--brand-cyan)':'var(--brand-orange)'}">${m.quantidade}</span></td><td class="text-muted">${m.observacoes||''}</td></tr>`).join('')}
     </tbody></table>`;
   }).catch(()=>{document.getElementById('historicoResult').innerHTML='<span class="text-muted small">Erro.</span>';});
 }
@@ -1431,9 +1518,16 @@ async function submitVeiculo(){
 
 /* ─── Autorizações (admin) ────────────────────────────────────────────── */
 let _autorizFiltro='pendente';
+let _autorizTipo='';
 function setAutorizFiltro(f,el){
   _autorizFiltro=f;
   document.querySelectorAll('#autorizTabs .nav-link').forEach(a=>a.classList.remove('active'));
+  if(el) el.classList.add('active');
+  loadAutorizacoes();
+}
+function setAutorizTipo(t,el){
+  _autorizTipo=t;
+  document.querySelectorAll('#autorizTipoTabs .btn').forEach(b=>b.classList.remove('active'));
   if(el) el.classList.add('active');
   loadAutorizacoes();
 }
@@ -1451,21 +1545,38 @@ function loadAutorizacoes(){
   const wrap=document.getElementById('autorizList');
   wrap.innerHTML='<div class="col-12 text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>';
   fetch('/api/solicitacoes?status='+_autorizFiltro).then(r=>r.json()).then(d=>{
-    const arr=d.solicitacoes||[];
+    let arr=d.solicitacoes||[];
+    if(_autorizTipo) arr=arr.filter(s=>s.tipo===_autorizTipo);
     if(!arr.length){ wrap.innerHTML=`<div class="col-12 text-center text-muted py-5"><i class="bi bi-check2-circle fs-1 d-block mb-2"></i>Nada ${_autorizFiltro==='pendente'?'aguardando autorização':'nesta lista'}.</div>`; return; }
     wrap.innerHTML=arr.map(s=>cardAutoriz(s)).join('');
   }).catch(()=>{ wrap.innerHTML='<div class="col-12 text-danger">Erro ao carregar.</div>'; });
 }
+const _fmtBRL=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const _ROTULOS_CAMPO={nome:'Nome',codigo:'Código',fabricante:'Fabricante',categoria:'Categoria',descricao:'Descrição',observacoes:'Observações',veiculos_compativeis:'Veículos compatíveis',preco_referencia:'Preço de referência',custo_unitario:'Custo (R$)',estoque_minimo:'Estoque mínimo',pendente_analise:'Pendente de análise'};
+function _fmtCampo(f,v){
+  if(v==null||v==='') return '—';
+  if(f==='custo_unitario'||f==='preco_referencia') return _fmtBRL(v);
+  if(f==='pendente_analise') return v?'Sim':'Não';
+  if(Array.isArray(v)) return v.length?v.join(', '):'—';
+  return String(v);
+}
 function estoqueDaPeca(id){ const p=allPecas.find(x=>x.id===id); return p?p.quantidade:'?'; }
-function cardAutoriz(s){
-  const cadastro=s.tipo==='cadastro', entrada=s.tipo==='entrada', veiculo=s.tipo==='veiculo';
-  const cor=veiculo?'var(--brand-navy)':cadastro?'#7c3aed':entrada?'var(--brand-cyan)':'var(--brand-orange)';
-  const tituloTipo=veiculo?'🚚 Novo veículo':cadastro?'🆕 Nova peça':entrada?'⬇ Entrada':'⬆ Saída';
+function cardAutoriz(s,somenteLeitura){
+  const cadastro=s.tipo==='cadastro', entrada=s.tipo==='entrada', veiculo=s.tipo==='veiculo', alteracao=s.tipo==='alteracao';
+  const cor=alteracao?'#0d9488':veiculo?'var(--brand-navy)':cadastro?'#7c3aed':entrada?'var(--brand-cyan)':'var(--brand-orange)';
+  const tituloTipo=alteracao?'✏️ Alteração':veiculo?'🚚 Novo veículo':cadastro?'🆕 Nova peça':entrada?'⬇ Entrada':'⬆ Saída';
   const dt=new Date(s.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const d=s.dados||{};
   const fotoThumb=(s.fotos&&s.fotos.length)?`<img src="/fotos/${s.fotos[0]}" style="width:64px;height:50px;object-fit:cover;border-radius:6px;float:right;margin-left:8px" onerror="this.style.display='none'">`:'';
   let corpo;
-  if(veiculo){
+  if(alteracao){
+    const antes=s.dados_antes||{};
+    const linhas=Object.keys(d).map(f=>
+      `<b>${_ROTULOS_CAMPO[f]||f}:</b> <span class="text-muted" style="text-decoration:line-through">${_fmtCampo(f,antes[f])}</span> → <b>${_fmtCampo(f,d[f])}</b>`
+    ).join('<br>');
+    corpo=`<b>Quem pediu:</b> ${s.solicitante_nome} · ${dt}<br>${linhas}
+      ${s.observacao?`<br><b>Obs:</b> ${s.observacao}`:''}`;
+  } else if(veiculo){
     corpo=`<b>Quem cadastrou:</b> ${s.solicitante_nome} · ${dt}<br>
       <b>Placa:</b> ${d.placa||'—'} · <b>Modelo:</b> ${d.modelo||'—'}<br>
       <b>Marca:</b> ${d.marca||'—'}
@@ -1474,18 +1585,21 @@ function cardAutoriz(s){
     corpo=`<b>Quem cadastrou:</b> ${s.solicitante_nome} · ${dt}<br>
       <b>Categoria:</b> ${d.categoria||'—'} · <b>Fabricante:</b> ${d.fabricante||'—'}<br>
       ${d.codigo?`<b>Código:</b> ${d.codigo}<br>`:''}
-      <b>Estoque inicial:</b> ${s.quantidade_solicitada}
+      <b>Estoque inicial:</b> ${s.quantidade_solicitada}${d.custo_unitario!=null?` · <b>Custo:</b> ${_fmtBRL(d.custo_unitario)}`:''}${d.estoque_minimo!=null?` · <b>Mínimo:</b> ${d.estoque_minimo}`:''}
       ${d.descricao?`<br><b>Descrição:</b> ${d.descricao}`:''}
       ${s.fotos&&s.fotos.length>1?`<br><span class="text-muted">${s.fotos.length} fotos</span>`:''}`;
   } else {
+    const custoLinha=entrada&&s.custo_unitario!=null?`<b>Custo un.:</b> ${_fmtBRL(s.custo_unitario)} · <b>Total:</b> ${_fmtBRL(s.custo_unitario*s.quantidade_solicitada)}<br>`:'';
     corpo=`<b>Quem pediu:</b> ${s.solicitante_nome} · ${dt}<br>
-      ${entrada?`<b>Fornecedor:</b> ${s.fornecedor||'—'}${s.nota_fiscal?` · NF ${s.nota_fiscal}`:''}<br>`:`<b>Veículo:</b> ${s.placa||'—'}<br>`}
+      ${entrada?`<b>Fornecedor:</b> ${s.fornecedor||'—'}${s.nota_fiscal?` · NF ${s.nota_fiscal}`:''}<br>${custoLinha}`:`<b>Veículo:</b> ${s.placa||'—'}<br>`}
       <b>Quantidade:</b> ${s.quantidade_solicitada} · <b>Estoque atual:</b> <span class="fw-bold">${estoqueDaPeca(s.peca_id)}</span>
       ${s.observacao?`<br><b>Obs:</b> ${s.observacao}`:''}`;
   }
-  const btnAjustar=(veiculo)?'':`<button class="btn btn-sm fw-semibold text-white" style="background:var(--brand-orange)" onclick="ajustarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-pencil me-1"></i>Ajustar qtd</button>`;
+  const btnAjustar=(veiculo||alteracao)?'':`<button class="btn btn-sm fw-semibold text-white" style="background:var(--brand-orange)" onclick="ajustarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-pencil me-1"></i>Ajustar qtd</button>`;
   let acoes='';
-  if(s.status==='pendente'){
+  if(s.status==='pendente' && somenteLeitura){
+    acoes=`<div class="small mt-2" style="color:var(--brand-orange)"><i class="bi bi-hourglass-split me-1"></i>Aguardando autorização do administrador</div>`;
+  } else if(s.status==='pendente'){
     acoes=`<div class="d-flex gap-2 mt-2 flex-wrap">
       <button class="btn btn-sm fw-semibold text-white" style="background:#1a8a4a" onclick="aprovarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-check-lg me-1"></i>Autorizar</button>
       ${btnAjustar}
@@ -1527,6 +1641,82 @@ function aprovarSol(id,qtd){ const msg=qtd>0?`Autorizar e mover o estoque em ${q
 function ajustarSol(id,sug){ const v=prompt('Quantidade autorizada:',sug); if(v===null) return; const q=parseInt(v); if(!Number.isInteger(q)||q<=0){showToast('Quantidade inválida','danger');return;} _acaoSol(`/api/solicitacoes/${id}/aprovar`,{quantidade_aprovada:q},`Autorizado (${q}).`); }
 function recusarSol(id){ const m=prompt('Motivo da recusa (obrigatório):'); if(m===null) return; if(!m.trim()){showToast('Motivo é obrigatório','danger');return;} _acaoSol(`/api/solicitacoes/${id}/recusar`,{motivo:m},'Recusado.'); }
 
+/* ─── Minhas Solicitações (operador) + notificações ───────────────────── */
+function renderMinhas(arr){
+  const wrap=document.getElementById('minhasList');
+  if(!wrap) return;
+  if(!arr.length){ wrap.innerHTML='<div class="col-12 text-center text-muted py-5"><i class="bi bi-inbox fs-1 d-block mb-2"></i>Você ainda não fez nenhuma solicitação.</div>'; return; }
+  wrap.innerHTML=arr.map(s=>cardAutoriz(s,true)).join('');
+}
+function loadMinhas(){
+  const wrap=document.getElementById('minhasList');
+  if(!wrap) return;
+  wrap.innerHTML='<div class="col-12 text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>';
+  fetch('/api/solicitacoes').then(r=>r.json()).then(d=>renderMinhas(d.solicitacoes||[]))
+    .catch(()=>{ wrap.innerHTML='<div class="col-12 text-danger">Erro ao carregar.</div>'; });
+}
+// Avisa o operador quando o admin autoriza/recusa algo dele (checa a cada 20s)
+function checarMinhasNotificacoes(){
+  if(!currentUser||currentUser.papel!=='operacao') return;
+  fetch('/api/solicitacoes').then(r=>r.ok?r.json():null).then(d=>{
+    if(!d) return;
+    const arr=d.solicitacoes||[];
+    const key='pecas_sol_status_'+currentUser.id;
+    let visto={}; try{ visto=JSON.parse(localStorage.getItem(key)||'{}'); }catch(_){}
+    arr.forEach(s=>{
+      const antes=visto[s.id];
+      if(antes==='pendente'&&s.status==='aprovada') showToast(`✅ Sua solicitação foi aprovada: ${s.peca_nome}`,'success');
+      if(antes==='pendente'&&s.status==='recusada') showToast(`❌ Sua solicitação foi rejeitada: ${s.peca_nome}${s.motivo_recusa?' — Motivo: '+s.motivo_recusa:''}`,'danger');
+      visto[s.id]=s.status;
+    });
+    try{ localStorage.setItem(key,JSON.stringify(visto)); }catch(_){}
+    const pend=arr.filter(s=>s.status==='pendente').length;
+    const b=document.getElementById('badgeMinhas');
+    if(b){ b.textContent=pend; b.style.display=pend>0?'':'none'; }
+    const vm=document.getElementById('viewMinhas');
+    if(vm&&getComputedStyle(vm).display!=='none') renderMinhas(arr);
+  }).catch(()=>{});
+}
+
+/* ─── Relatórios (admin) — totais semana/mês em qtd e R$ ──────────────── */
+function _relTabela(linhas,labelCol){
+  return `<div class="table-responsive"><table class="table table-sm table-hover mb-0">
+    <thead class="table-dark"><tr><th>${labelCol}</th><th class="text-center">Saídas</th><th class="text-end">Saídas R$</th><th class="text-center">Entradas</th><th class="text-end">Entradas R$</th></tr></thead>
+    <tbody>${linhas.map(l=>`<tr><td>${l.label}</td>
+      <td class="text-center">${l.saidas_qtd||0}</td><td class="text-end fw-semibold" style="color:var(--brand-orange)">${_fmtBRL(l.saidas_valor)}</td>
+      <td class="text-center">${l.entradas_qtd||0}</td><td class="text-end fw-semibold" style="color:#1a8a4a">${_fmtBRL(l.entradas_valor)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+function loadRelatorios(){
+  if(!isAdmin()) return;
+  const res=document.getElementById('relResumo');
+  res.innerHTML='<div class="col-12 text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>';
+  fetch('/api/relatorios').then(r=>r.json()).then(d=>{
+    const cardResumo=(titulo,b,icone)=>`<div class="col-md-6">
+      <div class="card shadow-sm h-100"><div class="card-body py-3">
+        <div class="kpi-label mb-2"><i class="bi ${icone} me-1"></i>${titulo}</div>
+        <div class="d-flex gap-4 flex-wrap">
+          <div><div class="fw-bold fs-4" style="color:var(--brand-orange)">${_fmtBRL(b.saidas_valor)}</div><div class="kpi-label">Saiu (${b.saidas_qtd||0} un.)</div></div>
+          <div><div class="fw-bold fs-4" style="color:#1a8a4a">${_fmtBRL(b.entradas_valor)}</div><div class="kpi-label">Entrou (${b.entradas_qtd||0} un.)</div></div>
+        </div>
+      </div></div></div>`;
+    res.innerHTML=cardResumo('Esta Semana ('+(d.semana_atual?d.semana_atual.label:'—')+')',d.semana_atual||{},'bi-calendar-week')
+                 +cardResumo('Este Mês ('+(d.mes_atual?d.mes_atual.label:'—')+')',d.mes_atual||{},'bi-calendar3');
+    document.getElementById('relSemanas').innerHTML=_relTabela(d.por_semana||[],'Semana');
+    document.getElementById('relMeses').innerHTML=_relTabela(d.por_mes||[],'Mês');
+    const tp=d.top_pecas_mes||[];
+    document.getElementById('relTopPecas').innerHTML=tp.length?`<div class="table-responsive"><table class="table table-sm table-hover mb-0">
+      <thead class="table-dark"><tr><th>Peça</th><th class="text-center">Qtd</th><th class="text-end">Valor</th></tr></thead>
+      <tbody>${tp.map((p,i)=>`<tr><td>${i+1}. ${p.nome}</td><td class="text-center">${p.qtd}</td><td class="text-end fw-semibold">${_fmtBRL(p.valor)}</td></tr>`).join('')}</tbody></table></div>`
+      :'<div class="p-3 text-muted text-center small">Sem saídas neste mês</div>';
+    const pv=d.por_veiculo_mes||[];
+    document.getElementById('relVeiculos').innerHTML=pv.length?`<div class="table-responsive"><table class="table table-sm table-hover mb-0">
+      <thead class="table-dark"><tr><th>Veículo</th><th class="text-center">Qtd</th><th class="text-end">Valor</th></tr></thead>
+      <tbody>${pv.map(v=>`<tr><td>${v.veiculo}</td><td class="text-center">${v.qtd}</td><td class="text-end fw-semibold">${_fmtBRL(v.valor)}</td></tr>`).join('')}</tbody></table></div>`
+      :'<div class="p-3 text-muted text-center small">Sem saídas neste mês</div>';
+  }).catch(()=>{ res.innerHTML='<div class="col-12 text-danger">Erro ao carregar relatórios.</div>'; });
+}
+
 /* ─── Atividade (auditoria) ───────────────────────────────────────────── */
 function loadAtividade(){
   if(!isAdmin()) return;
@@ -1538,7 +1728,15 @@ function loadAtividade(){
     const ico={login:['bi-box-arrow-in-right','#0a6d80','acessou o sistema'],
       criar_solicitacao:['bi-plus-circle','var(--brand-orange)','registrou um pedido'],
       aprovar_solicitacao:['bi-check-circle','#1a8a4a','autorizou'],
-      recusar_solicitacao:['bi-x-circle','#b02a37','recusou']};
+      recusar_solicitacao:['bi-x-circle','#b02a37','recusou'],
+      baixa_direta:['bi-box-arrow-up','var(--brand-orange)','deu baixa direta'],
+      editar_peca:['bi-pencil','#0d9488','editou uma peça']};
+    const disp=ua=>{
+      if(!ua) return '';
+      const cel=/Mobile|Android|iPhone|iPad/i.test(ua);
+      const nav=/Edg\//.test(ua)?'Edge':/Chrome\//.test(ua)?'Chrome':/Firefox\//.test(ua)?'Firefox':/Safari\//.test(ua)?'Safari':'';
+      return `${cel?'📱 Celular':'💻 Computador'}${nav?' · '+nav:''}`;
+    };
     wrap.innerHTML='<div class="table-responsive"><table class="table table-hover align-middle mb-0"><tbody>'+
       arr.map(a=>{
         const meta=ico[a.acao]||['bi-dot','#8a92b2',a.acao];
@@ -1547,9 +1745,12 @@ function loadAtividade(){
         const dd=a.dados_depois||{};
         if(a.acao==='login') detalhe=`entrou como <b>${(dd.papel||'').toString()}</b>`;
         else if(dd.tipo) detalhe=`${dd.tipo} · ${dd.peca_nome||''}${dd.quantidade_solicitada?` (${dd.quantidade_solicitada})`:''}`;
+        else if(dd.peca_nome||dd.nome) detalhe=dd.peca_nome||dd.nome;
+        const rastro=[a.ip,disp(a.user_agent)].filter(Boolean).join(' · ');
         return `<tr>
           <td style="width:36px"><i class="bi ${meta[0]}" style="color:${meta[1]};font-size:1.2rem"></i></td>
-          <td><b>${a.usuario_nome||'—'}</b> ${meta[2]} ${detalhe?`<span class="text-muted">— ${detalhe}</span>`:''}</td>
+          <td><b>${a.usuario_nome||'—'}</b> ${meta[2]} ${detalhe?`<span class="text-muted">— ${detalhe}</span>`:''}
+            ${rastro?`<div class="text-muted" style="font-size:.7rem">${rastro}</div>`:''}</td>
           <td class="text-end text-muted small text-nowrap">${dt}</td>
         </tr>`;
       }).join('')+'</tbody></table></div>';
@@ -1697,9 +1898,10 @@ function openNovaPecaModal(){
   editingId=null;
   document.querySelector('#modalNovaPeca .modal-title').innerHTML='<i class="bi bi-plus-circle me-2"></i>Nova Peça';
   document.getElementById('npSubmitBtn').innerHTML='<i class="bi bi-plus-circle me-1"></i>Adicionar Peça';
-  ['npNome','npCodigo','npFabricante','npDescricao','npObs'].forEach(id=>document.getElementById(id).value='');
+  ['npNome','npCodigo','npFabricante','npDescricao','npObs','npCusto','npMinimo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('npCategoria').value='';
   document.getElementById('npQtd').value=1;
+  document.getElementById('npQtd').disabled=false;
   document.getElementById('npPendente').checked=false;
   document.getElementById('uploadPreview').innerHTML='';
   document.getElementById('npFotoInput').value='';
@@ -1717,15 +1919,19 @@ function openNovaPecaModal(){
 function openEditModal(){
   const p=allPecas.find(x=>x.id===currentId); if(!p) return;
   editingId=p.id;
-  document.querySelector('#modalNovaPeca .modal-title').innerHTML='<i class="bi bi-pencil me-2"></i>Editar Peça';
-  document.getElementById('npSubmitBtn').innerHTML='<i class="bi bi-check2-circle me-1"></i>Salvar Alterações';
+  document.querySelector('#modalNovaPeca .modal-title').innerHTML=isAdmin()?'<i class="bi bi-pencil me-2"></i>Editar Peça':'<i class="bi bi-pencil me-2"></i>Solicitar Alteração';
+  document.getElementById('npSubmitBtn').innerHTML=isAdmin()?'<i class="bi bi-check2-circle me-1"></i>Salvar Alterações':'<i class="bi bi-send me-1"></i>Enviar para Autorização';
   document.getElementById('npNome').value=p.nome||'';
   document.getElementById('npCodigo').value=p.codigo||'';
   document.getElementById('npFabricante').value=p.fabricante||'';
   document.getElementById('npCategoria').value=p.categoria||'';
   document.getElementById('npDescricao').value=p.descricao||'';
   document.getElementById('npObs').value=p.observacoes||'';
+  document.getElementById('npCusto').value=p.custo_unitario!=null?p.custo_unitario:'';
+  document.getElementById('npMinimo').value=p.estoque_minimo!=null?p.estoque_minimo:'';
   document.getElementById('npQtd').value=p.quantidade||0;
+  // operador não mexe em estoque na alteração (só via entrada/baixa autorizada)
+  document.getElementById('npQtd').disabled=!isAdmin();
   document.getElementById('npPendente').checked=!!p.pendente_analise;
   document.getElementById('uploadPreview').innerHTML='';
   document.getElementById('npFotoInput').value='';
@@ -1756,15 +1962,33 @@ async function submitNovaPeca(){
     allFrota.filter(v=>v.modelo===el.value).forEach(v=>veics.push(`${v.placa} ${v.modelo}`));
   });
   const precoIa=parseFloat(document.getElementById('npFotoInput').dataset.precoIa||'0')||0;
+  const custoRaw=document.getElementById('npCusto').value;
+  const minimoRaw=document.getElementById('npMinimo').value;
   const payload={nome,codigo:document.getElementById('npCodigo').value.trim(),
     fabricante:document.getElementById('npFabricante').value.trim(),categoria:cat,
     descricao:document.getElementById('npDescricao').value.trim(),observacoes:document.getElementById('npObs').value.trim(),
     veiculos_compativeis:veics,quantidade:parseInt(document.getElementById('npQtd').value)||0,
     pendente_analise:document.getElementById('npPendente').checked,
+    ...(custoRaw!==''?{custo_unitario:Number(custoRaw)}:{}),
+    ...(minimoRaw!==''?{estoque_minimo:parseInt(minimoRaw)}:{}),
     ...(precoIa>0?{preco_referencia:precoIa}:{})};
   try {
+    if(editingId && !isAdmin()){
+      // ── OPERADOR editando: vira SOLICITAÇÃO DE ALTERAÇÃO (não grava direto) ──
+      const dados={...payload};
+      delete dados.quantidade; // estoque só muda via entrada/baixa autorizada
+      const r=await fetch('/api/solicitacoes',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({tipo:'alteracao',peca_id:editingId,dados})});
+      if(r.status===401){window.location.href='/login';return;}
+      const d=await r.json();
+      if(!d.success){showToast(d.error||'Erro.','danger');return;}
+      if(modalNovaBs) modalNovaBs.hide();
+      showToast('Alteração enviada. Aguardando autorização do administrador.','success');
+      checarMinhasNotificacoes();
+      return;
+    }
     if(editingId){
-      // ── EDITAR ──
+      // ── EDITAR (admin) ──
       const r=await fetch(`/api/pecas/${editingId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       const d=await r.json();
       if(!d.success){showToast(d.error||'Erro.','danger');return;}
@@ -1820,20 +2044,28 @@ async function submitNovaPeca(){
 }
 
 /* ─── Movimentações ───────────────────────────────────────────────────── */
+function _renderMovsTable(list,q){
+  const wrap=document.getElementById('movsTableWrap');
+  if(!list.length){wrap.innerHTML='<div class="p-4 text-center text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>'+(q?'Nenhum resultado.':'Nenhuma movimentação.')+'</div>';return;}
+  wrap.innerHTML=`<div class="table-responsive"><table class="table table-hover table-sm mb-0">
+    <thead class="table-dark"><tr><th>Data</th><th>Tipo</th><th>Peça</th><th>Responsável</th><th>Veículo</th><th class="text-center">Qtd</th><th class="text-end">Valor</th><th>Obs</th></tr></thead>
+    <tbody>${list.map(m=>`<tr><td>${new Date((m.data||'')+'T12:00:00').toLocaleDateString('pt-BR')}</td>
+      <td>${m.tipo==='entrada'?'<span class="badge" style="background:var(--brand-cyan)">⬇ Entrada</span>':'<span class="badge" style="background:var(--brand-orange)">⬆ Saída</span>'}</td>
+      <td><a href="#" onclick="openModal('${m.peca_id}');return false" class="fw-semibold">${m.peca_nome}</a>${m.peca_codigo?`<div class="text-muted" style="font-size:.74rem">${m.peca_codigo}</div>`:''}</td>
+      <td>${m.responsavel||'—'}</td><td>${m.veiculo||'—'}</td>
+      <td class="text-center"><span class="badge" style="background:${m.tipo==='entrada'?'var(--brand-cyan)':'var(--brand-orange)'}">${m.quantidade}</span></td>
+      <td class="text-end fw-semibold">${m.valor_total!=null?_fmtBRL(m.valor_total):'—'}</td>
+      <td class="text-muted small">${m.observacoes||''}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+function _filtraMovs(q){
+  if(!_movsCache) return [];
+  return q?_movsCache.filter(m=>(m.peca_nome||'').toLowerCase().includes(q)||(m.responsavel||'').toLowerCase().includes(q)||(m.veiculo||'').toLowerCase().includes(q)):_movsCache;
+}
 function filterMovs(){
-  const q=(document.getElementById('movsSearch')?.value||'').toLowerCase();
   if(!_movsCache) return;
-  const list = q ? _movsCache.filter(m=>
-    (m.peca_nome||'').toLowerCase().includes(q)||
-    (m.responsavel||'').toLowerCase().includes(q)||
-    (m.veiculo||'').toLowerCase().includes(q)
-  ) : _movsCache;
-  const tbody=document.getElementById('movsBody');
-  if(!tbody) return;
-  tbody.innerHTML=list.map(m=>{
-    const row=[m.id,m.data,m.peca_nome,m.peca_codigo||'',(m.responsavel||''),(m.veiculo||''),(m.quantidade),(m.observacoes||'')];
-    return '<tr>'+row.map(v=>'<td>'+v+'</td>').join('')+'</tr>';
-  }).join('');
+  const q=(document.getElementById('movsSearch')?.value||'').toLowerCase().trim();
+  _renderMovsTable(_filtraMovs(q),q);
 }
 function loadTodasMovimentacoes(){
   const wrap=document.getElementById('movsTableWrap');
@@ -1841,16 +2073,7 @@ function loadTodasMovimentacoes(){
   fetch('/api/movimentacoes').then(r=>r.json()).then(d=>{
     _movsCache=(d.movimentacoes||[]);
     const q=(document.getElementById('movsSearch')?.value||'').toLowerCase().trim();
-    const list=q?_movsCache.filter(m=>(m.peca_nome||'').toLowerCase().includes(q)||(m.responsavel||'').toLowerCase().includes(q)||(m.veiculo||'').toLowerCase().includes(q)):_movsCache;
-    if(!list.length){wrap.innerHTML='<div class="p-4 text-center text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>'+(q?'Nenhum resultado.':'Nenhuma movimentação.')+'</div>';return;}
-    wrap.innerHTML=`<div class="table-responsive"><table class="table table-hover table-sm mb-0">
-      <thead class="table-dark"><tr><th>Data</th><th>Peça</th><th>Responsável</th><th>Veículo</th><th class="text-center">Qtd</th><th>Obs</th></tr></thead>
-      <tbody>${list.map(m=>`<tr><td>${new Date(m.data+'T12:00:00').toLocaleDateString('pt-BR')}</td>
-        <td><a href="#" onclick="openModal('${m.peca_id}');return false" class="fw-semibold">${m.peca_nome}</a>${m.peca_codigo?`<div class="text-muted" style="font-size:.74rem">${m.peca_codigo}</div>`:''}</td>
-        <td>${m.responsavel}</td><td>${m.veiculo||'—'}</td>
-        <td class="text-center"><span class="badge" style="background:var(--brand-orange)">${m.quantidade}</span></td>
-        <td class="text-muted small">${m.observacoes||''}</td></tr>`).join('')}
-      </tbody></table></div>`;
+    _renderMovsTable(_filtraMovs(q),q);
   }).catch(()=>{wrap.innerHTML='<div class="p-4 text-danger">Erro ao carregar.</div>';});
 }
 
@@ -2078,6 +2301,11 @@ async function init(){
       if(va && getComputedStyle(va).display!=='none') loadAutorizacoes();
     }, 12000);
   }
+  // Operador: avisos de solicitação aprovada/recusada (a cada 20s)
+  if(currentUser && currentUser.papel==='operacao'){
+    checarMinhasNotificacoes();
+    setInterval(checarMinhasNotificacoes, 20000);
+  }
 }
 /* ─── Role / user ─────────────────────────────────────────────────────── */
 function applyRole(){
@@ -2093,7 +2321,10 @@ function applyRole(){
   // Só admin: cadastrar peça, perfis, autorizações
   document.getElementById('navPerfisItem').style.display=admin?'':'none';
   document.getElementById('navAutorizacoesItem').style.display=admin?'':'none';
+  document.getElementById('navRelatoriosItem').style.display=admin?'':'none';
   document.getElementById('navAtividadeItem').style.display=admin?'':'none';
+  // Operador acompanha as próprias solicitações (e recebe avisos de aprovado/recusado)
+  document.getElementById('navMinhasItem').style.display=(currentUser&&currentUser.papel==='operacao')?'':'none';
   const bnp=document.getElementById('btnNovaPeca'); if(bnp) bnp.style.display=oper?'':'none';
   const bnv=document.getElementById('btnNovoVeiculo'); if(bnv) bnv.style.display=oper?'':'none';
   // Menu enxuto para operador/viewer: escondemos as telas de análise do admin.
@@ -2109,7 +2340,10 @@ function applyRoleModal(){
   const show=(id,ok)=>{const e=document.getElementById(id); if(e) e.style.display=ok?'':'none';};
   show('mFotoUploadWrap',admin);
   show('mPrecoWrap',admin);
-  show('btnEditarPeca',admin);
+  // Operador pode ABRIR a edição, mas ela vira solicitação de alteração (aprovação do admin)
+  show('btnEditarPeca',oper);
+  const be=document.getElementById('btnEditarPeca');
+  if(be) be.innerHTML=admin?'<i class="bi bi-pencil me-1"></i>Editar':'<i class="bi bi-pencil me-1"></i>Solicitar alteração';
   show('btnDarBaixa',oper);
   show('btnEntrada',oper);
   document.querySelectorAll('.qtyAdmin').forEach(b=>b.style.display=admin?'':'none');
