@@ -819,6 +819,7 @@ app.post('/login', (req, res) => {
     if (pL) { pL.senha = hashPassword(senha); saveCatalog(cL); }
   }
   resetRateLimit(ip);
+  try { registrarAuditoria(loadCatalog(), { id: perfil.id, nome: perfil.nome }, 'login', 'sessao', perfil.id, null, { papel: normalizarPapel(perfil.papel) }, req); } catch (_) {}
   res.setHeader('Set-Cookie',
     `pecas_auth=${gerarAuthCookie(perfil.id)}; HttpOnly; Path=/; Max-Age=28800; SameSite=Lax`);
   res.redirect('/');

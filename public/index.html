@@ -201,6 +201,12 @@
           <span class="badge ms-auto sidebar-text" id="badgePendAutoriz" style="background:var(--brand-orange);display:none">0</span>
         </a>
       </li>
+      <li id="navAtividadeItem" style="display:none">
+        <a class="nav-link" id="navAtividade" onclick="setView('atividade')">
+          <i class="bi bi-activity nav-icon"></i>
+          <span class="sidebar-text ms-2">Atividade</span>
+        </a>
+      </li>
       <li id="navPerfisItem" style="display:none">
         <a class="nav-link" id="navPerfis" onclick="setView('perfis')">
           <i class="bi bi-people nav-icon"></i>
@@ -515,6 +521,18 @@
           <li class="nav-item"><a class="nav-link" data-af="recusada" onclick="setAutorizFiltro('recusada',this)">Recusadas</a></li>
         </ul>
         <div id="autorizList" class="row g-3"></div>
+      </div>
+
+      <!-- ── ATIVIDADE ── -->
+      <div id="viewAtividade" style="display:none">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <h4 class="fw-bold mb-0"><i class="bi bi-activity me-2 text-primary"></i>Atividade</h4>
+          <button class="btn btn-sm btn-outline-secondary" onclick="loadAtividade()"><i class="bi bi-arrow-clockwise me-1"></i>Atualizar</button>
+        </div>
+        <div class="alert alert-info border-0 shadow-sm small mb-3"><i class="bi bi-info-circle me-1"></i>Tudo que acontece no sistema: quem acessou, quem pediu baixa/entrada/cadastro e o que você autorizou ou recusou.</div>
+        <div class="card shadow-sm"><div class="card-body p-0" id="atividadeWrap">
+          <div class="p-4 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>
+        </div></div>
       </div>
 
       <!-- ── PERFIS ── -->
@@ -1085,8 +1103,8 @@ function updateVehicleFilterUI(){
 }
 
 /* ─── Views ───────────────────────────────────────────────────────────── */
-const VIEWS=['dashboard','todas','veiculos','pendentes','fora','movimentacoes','autorizacoes','perfis'];
-const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações',autorizacoes:'Autorizações',perfis:'Perfis de Acesso'};
+const VIEWS=['dashboard','todas','veiculos','pendentes','fora','movimentacoes','autorizacoes','atividade','perfis'];
+const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações',autorizacoes:'Autorizações',atividade:'Atividade',perfis:'Perfis de Acesso'};
 function isAdmin(){ return currentUser && currentUser.papel==='admin'; }
 function canOperar(){ return currentUser && (currentUser.papel==='admin' || currentUser.papel==='operacao'); }
 
@@ -1104,6 +1122,7 @@ function setView(v){
   if(v==='movimentacoes') loadTodasMovimentacoes();
   if(v==='dashboard')  loadDashboard();
   if(v==='autorizacoes') loadAutorizacoes();
+  if(v==='atividade')  loadAtividade();
   if(v==='perfis')     loadPerfis();
   if(v!=='movimentacoes') _movsCache=null;
   if(v!=='todas'&&vehicleFilter){vehicleFilter=null;updateVehicleFilterUI();}
@@ -1507,6 +1526,35 @@ async function _acaoSol(url,body,okMsg){
 function aprovarSol(id,qtd){ const msg=qtd>0?`Autorizar e mover o estoque em ${qtd} un.?`:'Autorizar este item?'; if(!confirm(msg)) return; _acaoSol(`/api/solicitacoes/${id}/aprovar`,{},'Autorizado.'); }
 function ajustarSol(id,sug){ const v=prompt('Quantidade autorizada:',sug); if(v===null) return; const q=parseInt(v); if(!Number.isInteger(q)||q<=0){showToast('Quantidade inválida','danger');return;} _acaoSol(`/api/solicitacoes/${id}/aprovar`,{quantidade_aprovada:q},`Autorizado (${q}).`); }
 function recusarSol(id){ const m=prompt('Motivo da recusa (obrigatório):'); if(m===null) return; if(!m.trim()){showToast('Motivo é obrigatório','danger');return;} _acaoSol(`/api/solicitacoes/${id}/recusar`,{motivo:m},'Recusado.'); }
+
+/* ─── Atividade (auditoria) ───────────────────────────────────────────── */
+function loadAtividade(){
+  if(!isAdmin()) return;
+  const wrap=document.getElementById('atividadeWrap');
+  wrap.innerHTML='<div class="p-4 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>';
+  fetch('/api/auditoria').then(r=>r.json()).then(d=>{
+    const arr=d.auditoria||[];
+    if(!arr.length){ wrap.innerHTML='<div class="p-4 text-center text-muted">Sem atividade ainda.</div>'; return; }
+    const ico={login:['bi-box-arrow-in-right','#0a6d80','acessou o sistema'],
+      criar_solicitacao:['bi-plus-circle','var(--brand-orange)','registrou um pedido'],
+      aprovar_solicitacao:['bi-check-circle','#1a8a4a','autorizou'],
+      recusar_solicitacao:['bi-x-circle','#b02a37','recusou']};
+    wrap.innerHTML='<div class="table-responsive"><table class="table table-hover align-middle mb-0"><tbody>'+
+      arr.map(a=>{
+        const meta=ico[a.acao]||['bi-dot','#8a92b2',a.acao];
+        const dt=new Date(a.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+        let detalhe='';
+        const dd=a.dados_depois||{};
+        if(a.acao==='login') detalhe=`entrou como <b>${(dd.papel||'').toString()}</b>`;
+        else if(dd.tipo) detalhe=`${dd.tipo} · ${dd.peca_nome||''}${dd.quantidade_solicitada?` (${dd.quantidade_solicitada})`:''}`;
+        return `<tr>
+          <td style="width:36px"><i class="bi ${meta[0]}" style="color:${meta[1]};font-size:1.2rem"></i></td>
+          <td><b>${a.usuario_nome||'—'}</b> ${meta[2]} ${detalhe?`<span class="text-muted">— ${detalhe}</span>`:''}</td>
+          <td class="text-end text-muted small text-nowrap">${dt}</td>
+        </tr>`;
+      }).join('')+'</tbody></table></div>';
+  }).catch(()=>{ wrap.innerHTML='<div class="p-4 text-danger">Erro ao carregar atividade.</div>'; });
+}
 
 /* ─── QR Code de acesso ───────────────────────────────────────────────── */
 let _qrModalBs=null;
@@ -2022,6 +2070,14 @@ async function init(){
   restoreSections();
   // Operador/viewer começam já nas peças (com foto); admin no dashboard.
   setView(isAdmin() ? 'dashboard' : 'todas');
+  // Admin: atualiza sozinho a fila de autorizações e o contador (a cada 12s)
+  if(isAdmin()){
+    setInterval(function(){
+      refreshBadgePendencias();
+      const va=document.getElementById('viewAutorizacoes');
+      if(va && getComputedStyle(va).display!=='none') loadAutorizacoes();
+    }, 12000);
+  }
 }
 /* ─── Role / user ─────────────────────────────────────────────────────── */
 function applyRole(){
@@ -2037,6 +2093,7 @@ function applyRole(){
   // Só admin: cadastrar peça, perfis, autorizações
   document.getElementById('navPerfisItem').style.display=admin?'':'none';
   document.getElementById('navAutorizacoesItem').style.display=admin?'':'none';
+  document.getElementById('navAtividadeItem').style.display=admin?'':'none';
   const bnp=document.getElementById('btnNovaPeca'); if(bnp) bnp.style.display=oper?'':'none';
   const bnv=document.getElementById('btnNovoVeiculo'); if(bnv) bnv.style.display=oper?'':'none';
   // Menu enxuto para operador/viewer: escondemos as telas de análise do admin.
