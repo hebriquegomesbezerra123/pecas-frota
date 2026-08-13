@@ -169,6 +169,13 @@
         </a>
       </li>
       <li>
+        <a class="nav-link" id="navFrota" onclick="setView('frota')">
+          <i class="bi bi-truck-front nav-icon"></i>
+          <span class="sidebar-text ms-2">Frota</span>
+          <span class="badge bg-secondary ms-auto sidebar-text" id="badgeFrota">0</span>
+        </a>
+      </li>
+      <li>
         <a class="nav-link" id="navVeiculos" onclick="setView('veiculos')">
           <i class="bi bi-truck nav-icon"></i>
           <span class="sidebar-text ms-2">Por Modelo</span>
@@ -192,6 +199,13 @@
         <a class="nav-link" id="navMovs" onclick="setView('movimentacoes')">
           <i class="bi bi-arrow-down-up nav-icon"></i>
           <span class="sidebar-text ms-2">Movimentações</span>
+        </a>
+      </li>
+      <li>
+        <a class="nav-link" id="navFerramentas" onclick="setView('ferramentas')">
+          <i class="bi bi-tools nav-icon"></i>
+          <span class="sidebar-text ms-2">Ferramentas</span>
+          <span class="badge ms-auto sidebar-text" id="badgeFerUso" style="background:var(--brand-orange);display:none">0</span>
         </a>
       </li>
       <li id="navMinhasItem" style="display:none">
@@ -311,7 +325,9 @@
           <div class="card kpi-card kpi-warning h-100">
             <div class="card-body position-relative py-3">
               <div class="kpi-value text-warning" id="kpiPendentes">—</div>
-              <div class="kpi-label mt-1">A Verificar</div>
+              <div class="kpi-label mt-1">A Verificar
+                <i class="bi bi-question-circle-fill ms-1" style="cursor:pointer;color:#8a92b2"
+                   title="O que é isso?" onclick="abrirAjuda('alertas')"></i></div>
               <i class="bi bi-exclamation-triangle text-warning opacity-25" style="font-size:2.2rem;position:absolute;right:14px;top:14px"></i>
             </div>
           </div>
@@ -320,7 +336,9 @@
           <div class="card kpi-card kpi-danger h-100">
             <div class="card-body position-relative py-3">
               <div class="kpi-value text-danger" id="kpiFora">—</div>
-              <div class="kpi-label mt-1">Fora da Frota</div>
+              <div class="kpi-label mt-1">Fora da Frota
+                <i class="bi bi-question-circle-fill ms-1" style="cursor:pointer;color:#8a92b2"
+                   title="O que é isso?" onclick="abrirAjuda('alertas')"></i></div>
               <i class="bi bi-x-circle text-danger opacity-25" style="font-size:2.2rem;position:absolute;right:14px;top:14px"></i>
             </div>
           </div>
@@ -476,6 +494,26 @@
         </div>
       </div>
 
+      <!-- ── FROTA ── -->
+      <div id="viewFrota" style="display:none">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <h4 class="fw-bold mb-0"><i class="bi bi-truck-front me-2 text-primary"></i>Frota</h4>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm fw-semibold" id="btnNovoVeicFrota" style="background:var(--brand-navy);color:#fff" onclick="openNovoVeiculoModal()">
+              <i class="bi bi-plus-lg me-1"></i>Novo Veículo
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadFrota()"><i class="bi bi-arrow-clockwise me-1"></i>Atualizar</button>
+          </div>
+        </div>
+        <div class="row g-3 mb-3" id="frotaKpis"></div>
+        <div class="card shadow-sm mb-3"><div class="card-body py-2">
+          <input id="frotaBusca" type="search" class="form-control form-control-sm" placeholder="Buscar por placa, modelo ou tipo…" oninput="renderFrota()">
+        </div></div>
+        <div class="card shadow-sm"><div class="card-body p-0" id="frotaWrap">
+          <div class="p-4 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>
+        </div></div>
+      </div>
+
       <!-- ── POR MODELO ── -->
       <div id="viewVeiculos" style="display:none">
         <h4 class="fw-bold mb-3"><i class="bi bi-truck me-2 text-primary"></i>Peças por Modelo</h4>
@@ -542,6 +580,29 @@
           <button class="btn btn-sm btn-outline-secondary" data-at="alteracao" onclick="setAutorizTipo('alteracao',this)">✏️ Alterações</button>
         </div>
         <div id="autorizList" class="row g-3"></div>
+      </div>
+
+      <!-- ── FERRAMENTAS ── -->
+      <div id="viewFerramentas" style="display:none">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <h4 class="fw-bold mb-0"><i class="bi bi-tools me-2 text-primary"></i>Ferramentas</h4>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm fw-semibold" id="btnNovaFerramenta" style="background:var(--brand-orange);color:#fff;display:none" onclick="openFerramentaModal()">
+              <i class="bi bi-plus-lg me-1"></i>Nova Ferramenta
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadFerramentas()"><i class="bi bi-arrow-clockwise me-1"></i>Atualizar</button>
+          </div>
+        </div>
+        <div class="alert alert-info border-0 shadow-sm small mb-3"><i class="bi bi-info-circle me-1"></i>
+          A ferramenta é <b>emprestada</b>, não baixada do estoque. Quem pega informa nome e cargo pelo QR, e o
+          sistema conta o tempo até a devolução — que só é aceita <b>com foto da ferramenta no lugar</b>.
+        </div>
+        <ul class="nav nav-pills mb-3 gap-1" id="ferTabs">
+          <li class="nav-item"><a class="nav-link active" onclick="setFerAba('todas',this)">Todas <span class="badge bg-light text-dark ms-1" id="cntFerTodas">0</span></a></li>
+          <li class="nav-item"><a class="nav-link" onclick="setFerAba('uso',this)">Emprestadas agora <span class="badge bg-light text-dark ms-1" id="cntFerUso">0</span></a></li>
+          <li class="nav-item"><a class="nav-link" onclick="setFerAba('historico',this)">Histórico</a></li>
+        </ul>
+        <div id="ferList" class="row g-3"></div>
       </div>
 
       <!-- ── MINHAS SOLICITAÇÕES (operador) ── -->
@@ -718,6 +779,8 @@
         <div class="d-flex align-items-center gap-2">
           <div id="mPendenteBadge" style="display:none">
             <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Pendente de Análise</span>
+            <button class="btn btn-sm fw-semibold ms-1" id="btnJaVerifiquei" style="background:#1a8a4a;color:#fff;font-size:.75rem"
+                    onclick="marcarVerificada(currentId)"><i class="bi bi-check2-circle me-1"></i>Já verifiquei</button>
           </div>
           <button class="btn btn-sm fw-semibold" id="btnDarBaixa" style="background:var(--brand-orange);color:#fff" onclick="openBaixaModal()">
             <i class="bi bi-box-arrow-up me-1"></i>Dar Baixa
@@ -790,6 +853,7 @@
               <option>Freios</option>
               <option>Motor</option>
               <option>Suspensão e Fixação</option>
+              <option>Óleos e Fluidos</option>
             </select>
           </div>
           <div class="col-md-6">
@@ -826,9 +890,15 @@
             <textarea class="form-control" id="npObs" rows="2" placeholder="Notas internas..."></textarea>
           </div>
           <div class="col-12">
-            <div class="form-check">
-              <input type="checkbox" class="form-check-input" id="npPendente">
-              <label class="form-check-label" for="npPendente">Pendente de Análise</label>
+            <div class="p-3 rounded" style="background:#fff8e6;border:2px solid #F5941D">
+              <div class="form-check mb-0">
+                <input type="checkbox" class="form-check-input" id="npPendente" style="width:1.3em;height:1.3em;cursor:pointer">
+                <label class="form-check-label ms-1" for="npPendente" style="cursor:pointer">
+                  <b>⚠️ Marcar como "A Verificar"</b>
+                  <div class="text-muted small">Deixe <b>marcado</b> se ainda falta confirmar código, marca ou veículo.
+                  <b>Desmarque</b> quando o cadastro estiver conferido — aí a peça sai da lista "A Verificar".</div>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -897,9 +967,12 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body text-center">
-        <p class="text-muted small">O funcionário escaneia com o celular e entra com o login e senha que você criou. Imprima e cole no almoxarifado.</p>
+        <p class="text-muted small">O funcionário escaneia com o celular <b>conectado no Wi-Fi da empresa</b> e entra com o login e senha que você criou. Imprima e cole no almoxarifado.</p>
         <div id="qrArea" class="d-flex justify-content-center my-3"></div>
         <div class="small text-muted" id="qrUrl"></div>
+        <div class="alert alert-warning small mt-2 mb-0" id="qrAviso" style="display:none">
+          <i class="bi bi-exclamation-triangle me-1"></i>Este endereço não vai funcionar no celular. Abra o sistema pelo IP da rede (ex.: <b>http://192.168.1.61:3200</b>) e gere o QR de novo.
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -945,6 +1018,54 @@
 </div>
 
 <!-- ── Modal: Entrada de Peça ──────────────────────────────────────────────── -->
+<!-- ── Modal: Nova Ferramenta ─────────────────────────────────────────────── -->
+<div class="modal fade" id="modalFerramenta" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--brand-orange);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-tools me-2"></i>Nova Ferramenta</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label">Nome *</label>
+            <input type="text" class="form-control" id="frNome" placeholder="Ex: Chave de Roda 32mm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Código</label>
+            <input type="text" class="form-control" id="frCodigo" placeholder="Ex: CR-32">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Onde fica guardada</label>
+            <input type="text" class="form-control" id="frLocal" placeholder="Ex: Painel A, gaveta 2">
+            <div class="form-text">Aparece pro funcionário saber onde devolver.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Descrição</label>
+            <textarea class="form-control" id="frDescricao" rows="2" placeholder="Detalhes da ferramenta..."></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Fotos</label>
+            <label class="upload-zone w-100" onclick="document.getElementById('frFotoInput').click()">
+              <i class="bi bi-camera fs-4 text-muted d-block mb-1"></i>
+              <span class="text-muted small">Clique para selecionar fotos</span>
+              <input type="file" id="frFotoInput" accept="image/*" multiple onchange="previewFrFotos(this)">
+            </label>
+            <div id="frUploadPreview" class="d-flex flex-wrap gap-1 mt-2"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" id="frSubmitBtn" onclick="submitFerramenta()">
+          <i class="bi bi-plus-circle me-1"></i>Cadastrar Ferramenta
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="modalEntrada" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -1046,8 +1167,294 @@
   </div>
 </div>
 
+<!-- ── Modal: Corrigir Movimentação ───────────────────────────────────────── -->
+<div class="modal fade" id="modalEditMov" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--brand-navy);color:#fff">
+        <div>
+          <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Corrigir Movimentação</h5>
+          <div style="font-size:.8rem;opacity:.85" id="emTitulo"></div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-muted small mb-2" id="emInfo"></div>
+        <div class="alert alert-warning border-0 small" style="background:#fff8e6;border-left:4px solid #F5941D!important">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Corrigir um lançamento <b>mexe no estoque</b>. Tudo fica gravado na <b>Atividade</b>: o que mudou, quem mudou e o porquê.
+        </div>
+        <div class="alert alert-danger py-2 small" id="emErro" style="display:none"></div>
+        <div class="alert alert-secondary py-2 small" id="emHistorico" style="display:none"></div>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Quantidade *</label>
+            <input type="number" class="form-control" id="emQtd" min="1">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Custo unitário</label>
+            <div class="input-group"><span class="input-group-text">R$</span>
+              <input type="number" class="form-control" id="emCusto" min="0" step="0.01" placeholder="0,00"></div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Veículo (placa)</label>
+            <input type="text" class="form-control text-uppercase" id="emVeiculo" placeholder="Ex: TKM2F51">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Responsável</label>
+            <input type="text" class="form-control" id="emResp">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Observações</label>
+            <input type="text" class="form-control" id="emObs">
+          </div>
+          <div class="col-12">
+            <div class="p-3 rounded" style="background:#fff8e6;border:2px solid #F5941D">
+              <label class="form-label fw-bold mb-1" for="emMotivo">
+                ⚠️ Por que está corrigindo? <span style="color:#c02626">*obrigatório</span>
+              </label>
+              <textarea class="form-control" id="emMotivo" rows="2"
+                placeholder="Ex: lancei 5 por engano, o certo era 3; veículo errado; custo digitado errado..."></textarea>
+              <div class="form-text">Isso fica registrado para sempre na Atividade, junto com o seu nome.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn fw-semibold" style="background:var(--brand-navy);color:#fff" onclick="salvarEditMov()">
+          <i class="bi bi-check2-circle me-1"></i>Salvar correção
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Editar Veículo ──────────────────────────────────────────────── -->
+<div class="modal fade" id="modalEditVeiculo" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--brand-navy);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-truck-front me-2"></i>Editar Veículo — <span id="evPlaca"></span></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-7">
+            <label class="form-label">Marca / Modelo</label>
+            <input type="text" class="form-control" id="evModelo" placeholder="Ex: VW/EXPRESS DRF">
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Marca</label>
+            <input type="text" class="form-control" id="evMarca" placeholder="Ex: VW">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Ano</label>
+            <input type="text" class="form-control" id="evAno" placeholder="Ex: 2022">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Tipo</label>
+            <input type="text" class="form-control" id="evTipo" list="tiposVeic" placeholder="Ex: Caminhão leve">
+            <datalist id="tiposVeic">
+              <option>Caminhão leve</option><option>Caminhão médio</option><option>Caminhão</option>
+              <option>Furgão</option><option>Caminhonete</option><option>Carreta</option>
+            </datalist>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">KM Inicial</label>
+            <input type="text" class="form-control" id="evKm" placeholder="Ex: 0 km">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Setor</label>
+            <input type="text" class="form-control" id="evSetor" placeholder="Ex: Logística">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="evStatus">
+              <option>Ativo</option><option>Inativo</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn fw-semibold" style="background:var(--brand-navy);color:#fff" onclick="salvarVeiculo()">
+          <i class="bi bi-check2-circle me-1"></i>Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Botão flutuante de AJUDA ───────────────────────────────────────────── -->
+<button id="btnAjuda" onclick="abrirAjuda()" title="Ajuda — o que cada coisa faz">?</button>
+<style>
+  #btnAjuda{position:fixed;right:18px;bottom:18px;z-index:1040;width:56px;height:56px;border-radius:50%;
+    border:none;background:var(--brand-navy);color:#fff;font-size:1.9rem;font-weight:800;cursor:pointer;
+    box-shadow:0 4px 16px rgba(27,43,110,.4);transition:transform .15s,background .15s;line-height:1}
+  #btnAjuda:hover{background:var(--brand-orange);transform:scale(1.08)}
+  .aj-tit{color:var(--brand-navy);font-weight:800}
+  .aj-box{background:#f0f2f7;border-left:4px solid var(--brand-orange);border-radius:8px;padding:.7rem .9rem;font-size:.9rem}
+  #modalAjuda .accordion-button:not(.collapsed){background:#eef1f8;color:var(--brand-navy);font-weight:700}
+  #modalAjuda .accordion-button{font-weight:600}
+  @media print{#btnAjuda{display:none}}
+</style>
+
+<!-- ── Modal: AJUDA ───────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalAjuda" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--brand-navy);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-question-circle me-2"></i>Ajuda — o que cada coisa faz</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="aj-box mb-3">
+          <b>A regra de ouro deste sistema:</b> nada entra ou sai do estoque sem o administrador autorizar.
+          Quando alguém pede uma peça, vira um <b>pedido pendente</b> — o estoque só muda depois do seu OK.
+        </div>
+
+        <div class="accordion" id="acAjuda">
+
+          <div class="accordion-item" id="aj-menu">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#c1">
+              📋 O que é cada tela do menu</button></h2>
+            <div id="c1" class="accordion-collapse collapse" data-bs-parent="#acAjuda"><div class="accordion-body">
+              <ul class="mb-0" style="line-height:1.9">
+                <li><b>Dashboard</b> — resumo geral: quanto saiu, quais peças mais usadas, gráficos.</li>
+                <li><b>Todas as Peças</b> — o catálogo completo, com foto. Dá pra buscar e filtrar.</li>
+                <li><b>Frota</b> — todos os veículos com placa, modelo, ano, tipo, KM, setor e status.
+                    Clicando no número azul da coluna <i>Peças</i> você vê quais peças servem naquele veículo.
+                    O lápis edita os dados do veículo.</li>
+                <li><b>Por Modelo</b> — mostra as peças separadas por modelo de veículo.</li>
+                <li><b>A Verificar</b> — peças com cadastro incompleto (ver abaixo).</li>
+                <li><b>Fora da Frota</b> — peças não ligadas a nenhum veículo (ver abaixo).</li>
+                <li><b>Movimentações</b> — histórico de tudo que entrou e saiu, com valor.</li>
+                <li><b>Autorizações</b> — 🔴 <b>a tela mais importante:</b> os pedidos esperando seu OK.</li>
+                <li><b>Relatórios</b> — quanto gastou de peça na semana e no mês, em R$.</li>
+                <li><b>Atividade</b> — quem acessou, quando, de qual aparelho e o que fez.</li>
+                <li><b>Perfis de Acesso</b> — criar e gerenciar os logins da equipe.</li>
+              </ul>
+            </div></div>
+          </div>
+
+          <div class="accordion-item" id="aj-autorizar">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#c2">
+              ✅ Como autorizar um pedido</button></h2>
+            <div id="c2" class="accordion-collapse collapse" data-bs-parent="#acAjuda"><div class="accordion-body">
+              <p>Quando alguém pede uma peça, aparece um número laranja no menu <b>Autorizações</b>.</p>
+              <ol style="line-height:1.9">
+                <li>Abra <b>Autorizações</b> — cada cartão mostra quem pediu, o setor, o veículo, a quantidade e o motivo.</li>
+                <li><b>Autorizar</b> → o estoque baixa na hora e fica registrado.</li>
+                <li><b>Ajustar qtd</b> → se pediram 3 mas saíram 2, você corrige antes de aprovar.</li>
+                <li><b>Recusar</b> → nada muda no estoque. É obrigatório escrever o motivo (a pessoa vê).</li>
+              </ol>
+              <div class="aj-box">O selo roxo <b>📱 via QR</b> significa que veio pelo QR da parede, onde a pessoa
+              digita o próprio nome (sem login). Confira o nome e o motivo antes de autorizar.</div>
+            </div></div>
+          </div>
+
+          <div class="accordion-item" id="aj-alertas">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#c3">
+              ⚠️ "A Verificar" e "Fora da Frota" — o que significam</button></h2>
+            <div id="c3" class="accordion-collapse collapse" data-bs-parent="#acAjuda"><div class="accordion-body">
+              <p><b>A Verificar (amarelo)</b> — peças marcadas como "cadastro incompleto": falta confirmar o código,
+              a marca ou o veículo. Para tirar dessa lista: abra a peça → <b>Editar</b> → desmarque
+              <i>"Pendente de Análise"</i> → Salvar.</p>
+              <p class="mb-0"><b>Fora da Frota (vermelho)</b> — peças que não estão ligadas a nenhum veículo da sua frota.
+              Não é erro! Só quer dizer que ninguém marcou ainda em quais veículos aquela peça serve.
+              Para ligar: abra a peça → <b>Editar</b> → marque os veículos em <i>"Veículos Compatíveis"</i> → Salvar.
+              Conforme forem marcando, esse número baixa sozinho.</p>
+            </div></div>
+          </div>
+
+          <div class="accordion-item" id="aj-estoque">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#c4">
+              📦 Dar baixa, entrada e cadastrar peça</button></h2>
+            <div id="c4" class="accordion-collapse collapse" data-bs-parent="#acAjuda"><div class="accordion-body">
+              <ul style="line-height:1.9">
+                <li><b>Dar Baixa</b> = peça SAIU do estoque (foi usada num veículo).</li>
+                <li><b>Registrar Entrada</b> = peça CHEGOU (compra/reposição). Aqui você põe o
+                    <b>custo</b> e a nota fiscal — é isso que alimenta os Relatórios de gasto.</li>
+                <li><b>Nova Peça</b> = cadastrar uma peça que ainda não existe no sistema.</li>
+              </ul>
+              <div class="aj-box">Você (admin) faz direto. Se um funcionário faz, vira pedido e espera sua autorização.</div>
+            </div></div>
+          </div>
+
+          <div class="accordion-item" id="aj-campos">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#c5">
+              💰 Custo, estoque mínimo e os relatórios</button></h2>
+            <div id="c5" class="accordion-collapse collapse" data-bs-parent="#acAjuda"><div class="accordion-body">
+              <ul style="line-height:1.9">
+                <li><b>Custo da peça (R$)</b> — quanto custou comprada. É daqui que sai o valor nos Relatórios.</li>
+                <li><b>Estoque mínimo</b> — abaixo desse número a peça conta como "estoque baixo" e aparece
+                    em alerta no Painel Bolsão.</li>
+                <li><b>Relatórios</b> — mostram quanto saiu e entrou <b>por semana e por mês, em R$</b>,
+                    quais peças mais consumiram e o gasto por veículo. Dá pra exportar pra Excel.</li>
+              </ul>
+            </div></div>
+          </div>
+
+          <div class="accordion-item" id="aj-qr">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#c6">
+              📱 QR Code da parede (como a equipe usa)</button></h2>
+            <div id="c6" class="accordion-collapse collapse" data-bs-parent="#acAjuda"><div class="accordion-body">
+              <p>Em <b>Autorizações → QR de Acesso → Imprimir (A4)</b> você imprime a folha pra colar no almoxarifado.</p>
+              <ol style="line-height:1.9">
+                <li>O funcionário aponta a câmera do celular pro QR (precisa estar no <b>Wi-Fi da empresa</b>).</li>
+                <li>Toca na peça que pegou.</li>
+                <li>Preenche nome, setor, veículo, quantidade e o motivo — <b>tudo obrigatório</b>.</li>
+                <li>O pedido cai aqui pra você autorizar. O estoque só muda depois disso.</li>
+              </ol>
+            </div></div>
+          </div>
+
+          <div class="accordion-item" id="aj-equipe">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#c7">
+              👥 Criar login para a equipe</button></h2>
+            <div id="c7" class="accordion-collapse collapse" data-bs-parent="#acAjuda"><div class="accordion-body">
+              <p>Menu <b>Perfis de Acesso → Novo Perfil</b>. Escolha o nível:</p>
+              <ul style="line-height:1.9">
+                <li><b>Admin</b> — pode tudo, inclusive autorizar. Cuidado ao dar esse nível.</li>
+                <li><b>Operação</b> — pede baixa/entrada/cadastro, mas tudo passa por você.</li>
+                <li><b>Visualização</b> — só olha, não mexe em nada.</li>
+              </ul>
+              <div class="aj-box">Quem sai da empresa: não precisa apagar — basta <b>desativar</b>.
+              Assim ele não entra mais, mas o histórico do que ele fez continua guardado.</div>
+            </div></div>
+          </div>
+
+          <div class="accordion-item" id="aj-problemas">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#c8">
+              🔧 Deu problema? (erros comuns)</button></h2>
+            <div id="c8" class="accordion-collapse collapse" data-bs-parent="#acAjuda"><div class="accordion-body">
+              <ul style="line-height:1.9">
+                <li><b>"não autenticado"</b> — sua sessão venceu (dura 8 horas). Aperte <b>F5</b>, faça login de novo
+                    e refaça o que estava fazendo.</li>
+                <li><b>Não abre no celular</b> — confira se o celular está no <b>Wi-Fi da empresa</b>. Fora dele não funciona
+                    (é assim de propósito, por segurança).</li>
+                <li><b>Não abre em lugar nenhum</b> — o computador servidor pode estar desligado. Ligue ele, ou abra o
+                    <b>Painel Bolsão → ⚡ Ligar Tudo</b>.</li>
+                <li><b>Mudou algo e não apareceu</b> — aperte <b>Ctrl + Shift + R</b> para atualizar a página.</li>
+              </ul>
+            </div></div>
+          </div>
+
+        </div>
+      </div>
+      <div class="modal-footer">
+        <span class="text-muted small me-auto">Endereço do sistema: <b>http://192.168.1.61:3200</b></span>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- QR local (não depende de internet — o sistema roda só na rede da empresa) -->
+<script src="/qrcode.min.js"></script>
 <script>
 /* ─── State ────────────────────────────────────────────────────────────── */
 let allPecas     = [];
@@ -1139,10 +1546,32 @@ function buildCard(p){
           <span class="badge rounded-pill" style="background:var(--brand-navy);color:#fff;font-size:.73rem">${p.quantidade} un.</span>
           <div class="d-flex gap-1 flex-wrap justify-content-end">${veics}${more}</div>
         </div>
-        ${(pb||fb||eb||zb)?`<div class="mt-1 d-flex gap-1">${pb}${fb}${eb}${zb}</div>`:''}
+        ${(pb||fb||eb||zb)?`<div class="mt-1 d-flex gap-1 flex-wrap">${pb}${fb}${eb}${zb}</div>`:''}
+        ${p.pendente_analise&&isAdmin()?`<button class="btn btn-sm w-100 mt-2 fw-semibold" style="background:#1a8a4a;color:#fff;font-size:.74rem"
+            onclick="event.stopPropagation();marcarVerificada('${p.id}')"><i class="bi bi-check2-circle me-1"></i>Já verifiquei</button>`:''}
       </div>
     </div>`;
   return col;
+}
+
+/* Tira a peça da lista "A Verificar" com 1 clique (só admin) */
+async function marcarVerificada(id){
+  try{
+    const r=await fetch(`/api/pecas/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pendente_analise:false})});
+    if(r.status===401){ showToast('Sua sessão venceu. Faça login de novo (F5).','danger'); return; }
+    const d=await r.json();
+    if(!d.success){ showToast(d.error||'Erro.','danger'); return; }
+    const p=allPecas.find(x=>x.id===id); if(p) p.pendente_analise=false;
+    showToast('Peça marcada como verificada!','success');
+    // some com o aviso no detalhe da peça, se estiver aberto
+    const badge=document.getElementById('mPendenteBadge'); if(badge) badge.style.display='none';
+    reloadStats();
+    // redesenha a tela atual
+    const vp=document.getElementById('viewPendentes');
+    if(vp&&getComputedStyle(vp).display!=='none') renderList('pendentesList',allPecas.filter(x=>x.pendente_analise));
+    else filterPecas();
+  }catch(e){ showToast('Sem conexão com o servidor.','danger'); }
 }
 
 /* ─── Filter / sort ───────────────────────────────────────────────────── */
@@ -1188,8 +1617,8 @@ function updateVehicleFilterUI(){
 }
 
 /* ─── Views ───────────────────────────────────────────────────────────── */
-const VIEWS=['dashboard','todas','veiculos','pendentes','fora','movimentacoes','minhas','autorizacoes','relatorios','atividade','perfis'];
-const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações',minhas:'Minhas Solicitações',autorizacoes:'Autorizações',relatorios:'Relatórios',atividade:'Atividade',perfis:'Perfis de Acesso'};
+const VIEWS=['dashboard','todas','frota','veiculos','pendentes','fora','movimentacoes','ferramentas','minhas','autorizacoes','relatorios','atividade','perfis'];
+const VIEW_LABELS={dashboard:'Dashboard',todas:'Todas as Peças',frota:'Frota',veiculos:'Por Modelo',pendentes:'A Verificar',fora:'Fora da Frota',movimentacoes:'Movimentações',ferramentas:'Ferramentas',minhas:'Minhas Solicitações',autorizacoes:'Autorizações',relatorios:'Relatórios',atividade:'Atividade',perfis:'Perfis de Acesso'};
 function isAdmin(){ return currentUser && currentUser.papel==='admin'; }
 function canOperar(){ return currentUser && (currentUser.papel==='admin' || currentUser.papel==='operacao'); }
 
@@ -1206,7 +1635,9 @@ function setView(v){
   if(v==='veiculos')   renderVeiculos();
   if(v==='movimentacoes') loadTodasMovimentacoes();
   if(v==='dashboard')  loadDashboard();
+  if(v==='frota')      loadFrota();
   if(v==='autorizacoes') loadAutorizacoes();
+  if(v==='ferramentas') loadFerramentas();
   if(v==='minhas')     loadMinhas();
   if(v==='relatorios') loadRelatorios();
   if(v==='atividade')  loadAtividade();
@@ -1273,6 +1704,8 @@ function openModal(id){
   const ow=document.getElementById('mObsWrap');
   if(p.observacoes){document.getElementById('mObs').textContent=p.observacoes;ow.style.display='';}else ow.style.display='none';
   document.getElementById('mPendenteBadge').style.display=p.pendente_analise?'':'none';
+  // o botão "Já verifiquei" é só do admin
+  const bjv=document.getElementById('btnJaVerifiquei'); if(bjv) bjv.style.display=isAdmin()?'':'none';
 
   const main=document.getElementById('mFotoMain'), ph=document.getElementById('mFotoPlaceholder'), thumbs=document.getElementById('mThumbs');
   thumbs.innerHTML='';
@@ -1516,6 +1949,158 @@ async function submitVeiculo(){
   }catch(e){ restore(); showToast('Sem conexão com o servidor.','danger'); }
 }
 
+/* ─── Ferramentas (empréstimo) ────────────────────────────────────────── */
+let FERRAMENTAS=[], EMPRESTIMOS=[], _ferAba='todas', _ferTimer=null;
+
+function tempoDesdeStr(iso){
+  let ms=Date.now()-new Date(iso).getTime(); if(ms<0) ms=0;
+  const min=Math.floor(ms/60000), h=Math.floor(min/60), d=Math.floor(h/24);
+  if(d>0) return d+'d '+(h%24)+'h';
+  if(h>0) return h+'h '+(min%60)+'min';
+  return min+'min';
+}
+function duracaoStr(ini,fim){
+  let ms=new Date(fim)-new Date(ini); if(ms<0) ms=0;
+  const min=Math.floor(ms/60000), h=Math.floor(min/60), d=Math.floor(h/24);
+  if(d>0) return d+'d '+(h%24)+'h';
+  if(h>0) return h+'h '+(min%60)+'min';
+  return min+'min';
+}
+function setFerAba(qual,el){
+  _ferAba=qual;
+  document.querySelectorAll('#ferTabs .nav-link').forEach(a=>a.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderFerramentas();
+}
+function loadFerramentas(){
+  const wrap=document.getElementById('ferList');
+  wrap.innerHTML='<div class="col-12 text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>';
+  Promise.all([
+    fetch('/api/ferramentas').then(r=>r.json()),
+    fetch('/api/emprestimos').then(r=>r.json()).catch(()=>({emprestimos:[]}))
+  ]).then(([f,e])=>{
+    FERRAMENTAS=f.ferramentas||[]; EMPRESTIMOS=e.emprestimos||[];
+    const emUso=FERRAMENTAS.filter(x=>x.status==='em_uso').length;
+    document.getElementById('cntFerTodas').textContent=FERRAMENTAS.length;
+    document.getElementById('cntFerUso').textContent=emUso;
+    const b=document.getElementById('badgeFerUso');
+    if(b){ b.textContent=emUso; b.style.display=emUso>0?'':'none'; }
+    renderFerramentas();
+    // relógio ao vivo enquanto a tela estiver aberta
+    if(_ferTimer) clearInterval(_ferTimer);
+    _ferTimer=setInterval(()=>{
+      const v=document.getElementById('viewFerramentas');
+      if(v && getComputedStyle(v).display!=='none' && _ferAba!=='historico') renderFerramentas();
+      else if(!v || getComputedStyle(v).display==='none'){ clearInterval(_ferTimer); _ferTimer=null; }
+    },60000);
+  }).catch(()=>{ wrap.innerHTML='<div class="col-12 text-danger">Erro ao carregar ferramentas.</div>'; });
+}
+function renderFerramentas(){
+  const wrap=document.getElementById('ferList');
+  if(_ferAba==='historico') return renderHistoricoFer();
+  let lista=FERRAMENTAS;
+  if(_ferAba==='uso') lista=FERRAMENTAS.filter(f=>f.status==='em_uso');
+  if(!lista.length){
+    wrap.innerHTML='<div class="col-12 text-center text-muted py-5"><i class="bi bi-tools fs-1 d-block mb-2"></i>'+
+      (FERRAMENTAS.length? 'Nenhuma ferramenta emprestada agora.' : 'Nenhuma ferramenta cadastrada. Clique em "Nova Ferramenta".')+'</div>';
+    return;
+  }
+  wrap.innerHTML=lista.map(f=>{
+    const emUso=f.status==='em_uso';
+    const foto=(f.fotos&&f.fotos.length)
+      ? `<img src="/fotos/${f.fotos[0]}" style="width:100%;height:130px;object-fit:cover" onerror="this.style.display='none'">`
+      : `<div style="height:130px;display:flex;align-items:center;justify-content:center;background:#e8eaf0;color:#b0b8d0"><i class="bi bi-tools" style="font-size:2.5rem"></i></div>`;
+    return `<div class="col-12 col-md-6 col-xl-4">
+      <div class="card shadow-sm h-100" style="border-left:5px solid ${emUso?'var(--brand-orange)':'#1a8a4a'}">
+        ${foto}
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <div class="fw-bold" style="color:var(--brand-navy)">${f.nome}</div>
+            <span class="badge ${emUso?'bg-warning text-dark':'bg-success'}">${emUso?'Emprestada':'Disponível'}</span>
+          </div>
+          ${f.codigo?`<div class="text-muted small">${f.codigo}</div>`:''}
+          ${f.local?`<div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>${f.local}</div>`:''}
+          ${emUso?`<div class="mt-2 small">
+              <div><b>Com:</b> ${f.com_quem} <span class="text-muted">(${f.cargo||'—'})</span></div>
+              <div class="fw-bold" style="color:#c02626"><i class="bi bi-clock-history me-1"></i>há ${tempoDesdeStr(f.desde)}</div>
+              <div class="text-muted" style="font-size:.75rem">desde ${new Date(f.desde).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
+            </div>`:'<div class="mt-2 small text-muted">Guardada no lugar.</div>'}
+          ${isAdmin()?`<button class="btn btn-sm btn-outline-danger mt-2" onclick="excluirFerramenta('${f.id}','${(f.nome||'').replace(/'/g,"\\'")}')"><i class="bi bi-trash"></i></button>`:''}
+        </div>
+      </div></div>`;
+  }).join('');
+}
+function renderHistoricoFer(){
+  const wrap=document.getElementById('ferList');
+  if(!EMPRESTIMOS.length){ wrap.innerHTML='<div class="col-12 text-center text-muted py-5">Sem histórico ainda.</div>'; return; }
+  wrap.innerHTML='<div class="col-12"><div class="card shadow-sm"><div class="card-body p-0"><div class="table-responsive">'+
+    '<table class="table table-hover align-middle mb-0"><thead class="table-light"><tr style="font-size:.72rem;text-transform:uppercase">'+
+    '<th>Ferramenta</th><th>Quem pegou</th><th>Cargo</th><th>Retirou</th><th>Devolveu</th><th>Tempo</th><th>Foto</th></tr></thead><tbody>'+
+    EMPRESTIMOS.map(e=>{
+      const dev=e.status==='devolvido';
+      return `<tr>
+        <td class="fw-semibold">${e.ferramenta_nome}</td>
+        <td>${e.pessoa_nome}</td>
+        <td class="text-muted small">${e.cargo||'—'}</td>
+        <td class="small">${new Date(e.retirado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+        <td class="small">${dev?new Date(e.devolvido_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'<span class="badge bg-warning text-dark">Em uso</span>'}</td>
+        <td class="small fw-bold" style="color:${dev?'#1a8a4a':'#c02626'}">${dev?duracaoStr(e.retirado_em,e.devolvido_em):'há '+tempoDesdeStr(e.retirado_em)}</td>
+        <td>${e.foto_devolucao?`<a href="/fotos/${e.foto_devolucao}" target="_blank"><img src="/fotos/${e.foto_devolucao}" style="width:52px;height:40px;object-fit:cover;border-radius:5px"></a>`:'<span class="text-muted small">—</span>'}</td>
+      </tr>`;
+    }).join('')+'</tbody></table></div></div></div></div>';
+}
+// ── Cadastro de ferramenta (admin) ──
+let _frFiles=null, modalFerBs=null;
+function openFerramentaModal(){
+  ['frNome','frCodigo','frLocal','frDescricao'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('frFotoInput').value='';
+  document.getElementById('frUploadPreview').innerHTML='';
+  if(!modalFerBs) modalFerBs=new bootstrap.Modal(document.getElementById('modalFerramenta'));
+  modalFerBs.show();
+}
+function previewFrFotos(input){
+  const wrap=document.getElementById('frUploadPreview'); wrap.innerHTML='';
+  Array.from(input.files).forEach(f=>{
+    const img=document.createElement('img');
+    img.src=URL.createObjectURL(f);
+    img.style.cssText='width:60px;height:46px;object-fit:cover;border-radius:4px';
+    wrap.appendChild(img);
+  });
+}
+async function submitFerramenta(){
+  const nome=document.getElementById('frNome').value.trim();
+  if(!nome){ document.getElementById('frNome').focus(); return; }
+  const btn=document.getElementById('frSubmitBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Salvando...';
+  const restore=()=>{ btn.disabled=false; btn.innerHTML='<i class="bi bi-plus-circle me-1"></i>Cadastrar Ferramenta'; };
+  try{
+    const r=await fetch('/api/ferramentas',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({nome,codigo:document.getElementById('frCodigo').value.trim(),
+        local:document.getElementById('frLocal').value.trim(),
+        descricao:document.getElementById('frDescricao').value.trim()})});
+    const d=await r.json();
+    if(!d.success){ restore(); showToast(d.error||'Erro.','danger'); return; }
+    const files=document.getElementById('frFotoInput').files;
+    if(files.length){
+      const fd=new FormData(); Array.from(files).forEach(f=>fd.append('fotos',f));
+      await fetch(`/api/ferramentas/${d.ferramenta.id}/fotos`,{method:'POST',body:fd});
+    }
+    restore();
+    if(modalFerBs) modalFerBs.hide();
+    showToast(`Ferramenta "${nome}" cadastrada!`,'success');
+    loadFerramentas();
+  }catch(e){ restore(); showToast('Erro ao salvar ferramenta.','danger'); }
+}
+async function excluirFerramenta(id,nome){
+  if(!confirm(`Excluir a ferramenta "${nome}"?`)) return;
+  try{
+    const r=await fetch(`/api/ferramentas/${id}`,{method:'DELETE'});
+    const d=await r.json();
+    if(!d.success){ showToast(d.error||'Erro.','danger'); return; }
+    showToast('Ferramenta excluída.','success'); loadFerramentas();
+  }catch(e){ showToast('Erro ao excluir.','danger'); }
+}
+
 /* ─── Autorizações (admin) ────────────────────────────────────────────── */
 let _autorizFiltro='pendente';
 let _autorizTipo='';
@@ -1590,10 +2175,13 @@ function cardAutoriz(s,somenteLeitura){
       ${s.fotos&&s.fotos.length>1?`<br><span class="text-muted">${s.fotos.length} fotos</span>`:''}`;
   } else {
     const custoLinha=entrada&&s.custo_unitario!=null?`<b>Custo un.:</b> ${_fmtBRL(s.custo_unitario)} · <b>Total:</b> ${_fmtBRL(s.custo_unitario*s.quantidade_solicitada)}<br>`:'';
-    corpo=`<b>Quem pediu:</b> ${s.solicitante_nome} · ${dt}<br>
+    // Pedido feito pela tela do QR: nome é declarado (sem login) — sinalizamos pro admin conferir
+    const selo=s.via_qr?` <span class="badge" style="background:#6b21a8;color:#fff;font-size:.62rem" title="Enviado pela tela do QR — nome informado pela pessoa">📱 via QR</span>`:'';
+    corpo=`<b>Quem pediu:</b> ${s.solicitante_nome}${selo}${s.setor?` · <b>Setor:</b> ${s.setor}`:''}<br>
+      <span class="text-muted">${dt}</span><br>
       ${entrada?`<b>Fornecedor:</b> ${s.fornecedor||'—'}${s.nota_fiscal?` · NF ${s.nota_fiscal}`:''}<br>${custoLinha}`:`<b>Veículo:</b> ${s.placa||'—'}<br>`}
       <b>Quantidade:</b> ${s.quantidade_solicitada} · <b>Estoque atual:</b> <span class="fw-bold">${estoqueDaPeca(s.peca_id)}</span>
-      ${s.observacao?`<br><b>Obs:</b> ${s.observacao}`:''}`;
+      ${s.observacao?`<br><b>Motivo:</b> ${s.observacao}`:''}`;
   }
   const btnAjustar=(veiculo||alteracao)?'':`<button class="btn btn-sm fw-semibold text-white" style="background:var(--brand-orange)" onclick="ajustarSol('${s.id}',${s.quantidade_solicitada})"><i class="bi bi-pencil me-1"></i>Ajustar qtd</button>`;
   let acoes='';
@@ -1640,6 +2228,108 @@ async function _acaoSol(url,body,okMsg){
 function aprovarSol(id,qtd){ const msg=qtd>0?`Autorizar e mover o estoque em ${qtd} un.?`:'Autorizar este item?'; if(!confirm(msg)) return; _acaoSol(`/api/solicitacoes/${id}/aprovar`,{},'Autorizado.'); }
 function ajustarSol(id,sug){ const v=prompt('Quantidade autorizada:',sug); if(v===null) return; const q=parseInt(v); if(!Number.isInteger(q)||q<=0){showToast('Quantidade inválida','danger');return;} _acaoSol(`/api/solicitacoes/${id}/aprovar`,{quantidade_aprovada:q},`Autorizado (${q}).`); }
 function recusarSol(id){ const m=prompt('Motivo da recusa (obrigatório):'); if(m===null) return; if(!m.trim()){showToast('Motivo é obrigatório','danger');return;} _acaoSol(`/api/solicitacoes/${id}/recusar`,{motivo:m},'Recusado.'); }
+
+/* ─── Frota ───────────────────────────────────────────────────────────── */
+function loadFrota(){
+  const wrap=document.getElementById('frotaWrap');
+  if(!wrap) return;
+  wrap.innerHTML='<div class="p-4 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Carregando...</div>';
+  fetch('/api/frota').then(r=>r.json()).then(d=>{
+    allFrota=d.frota||[];
+    const bf=document.getElementById('badgeFrota'); if(bf) bf.textContent=allFrota.length;
+    renderFrota();
+  }).catch(()=>{ wrap.innerHTML='<div class="p-4 text-danger">Erro ao carregar a frota.</div>'; });
+}
+// quantas peças estão ligadas a cada placa
+function pecasDoVeiculo(placa){
+  const pl=String(placa).toUpperCase();
+  return allPecas.filter(p=>(p.veiculos_compativeis||[]).some(v=>String(v).toUpperCase().includes(pl))).length;
+}
+function renderFrota(){
+  const wrap=document.getElementById('frotaWrap');
+  const q=(document.getElementById('frotaBusca')?.value||'').toLowerCase().trim();
+  let lista=allFrota.slice().sort((a,b)=>a.placa.localeCompare(b.placa));
+  if(q) lista=lista.filter(v=>[v.placa,v.modelo,v.marca,v.tipo,v.ano,v.status].join(' ').toLowerCase().includes(q));
+
+  // KPIs
+  const ativos=allFrota.filter(v=>(v.status||'Ativo')==='Ativo').length;
+  const inativos=allFrota.length-ativos;
+  const semPecas=allFrota.filter(v=>pecasDoVeiculo(v.placa)===0).length;
+  const kpi=(val,lbl,cor)=>`<div class="col-6 col-md-3"><div class="card kpi-card h-100" style="border-left-color:${cor}">
+    <div class="card-body py-3"><div class="fw-bold fs-4" style="color:${cor}">${val}</div><div class="kpi-label">${lbl}</div></div></div></div>`;
+  document.getElementById('frotaKpis').innerHTML=
+    kpi(allFrota.length,'Veículos','var(--brand-navy)')+kpi(ativos,'Ativos','#1a8a4a')+
+    kpi(inativos,'Inativos','#b02a37')+kpi(semPecas,'Sem peça ligada','var(--brand-orange)');
+
+  if(!lista.length){ wrap.innerHTML='<div class="p-4 text-center text-muted">Nenhum veículo encontrado.</div>'; return; }
+  wrap.innerHTML=`<div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead class="table-dark"><tr>
+      <th>Placa</th><th>Marca / Modelo</th><th class="text-center">Ano</th><th>Tipo</th>
+      <th class="text-end">KM</th><th>Setor</th><th class="text-center">Status</th>
+      <th class="text-center">Peças</th>${isAdmin()?'<th></th>':''}</tr></thead>
+    <tbody>${lista.map(v=>{
+      const ativo=(v.status||'Ativo')==='Ativo';
+      const n=pecasDoVeiculo(v.placa);
+      return `<tr>
+        <td><b style="color:var(--brand-navy)">${v.placa}</b></td>
+        <td>${v.modelo||'—'}${v.marca?`<div class="text-muted" style="font-size:.72rem">${v.marca}</div>`:''}</td>
+        <td class="text-center">${v.ano||'—'}</td>
+        <td>${v.tipo||'—'}</td>
+        <td class="text-end">${v.km||'0 km'}</td>
+        <td>${v.setor||'—'}</td>
+        <td class="text-center"><span class="badge ${ativo?'bg-success':'bg-danger'}">${v.status||'Ativo'}</span></td>
+        <td class="text-center">${n>0?`<a href="#" onclick="filtrarPorPlaca('${v.placa}');return false" class="badge text-decoration-none" style="background:var(--brand-navy)">${n}</a>`
+                                    :'<span class="badge bg-secondary">0</span>'}</td>
+        ${isAdmin()?`<td class="text-end"><button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="openEditVeiculo('${v.placa}')" title="Editar"><i class="bi bi-pencil"></i></button></td>`:''}
+      </tr>`;}).join('')}
+    </tbody></table></div>`;
+}
+// mostra as peças ligadas a uma placa
+function filtrarPorPlaca(placa){
+  const pl=String(placa).toUpperCase();
+  vehicleFilter=null;
+  setView('todas');
+  setTimeout(()=>{
+    const inp=document.getElementById('searchInput'); if(inp) inp.value='';
+    const sel=document.getElementById('catSelect'); if(sel) sel.value='';
+    const lista=allPecas.filter(p=>(p.veiculos_compativeis||[]).some(v=>String(v).toUpperCase().includes(pl)));
+    renderList('pecasGrid',lista);
+    const rc=document.getElementById('resultCount'); if(rc) rc.textContent=lista.length+' peças · '+pl;
+  },250);
+}
+// editar veículo (admin)
+let _editVeicPlaca=null, _modalVeicEdit=null;
+function openEditVeiculo(placa){
+  const v=allFrota.find(x=>x.placa===placa); if(!v) return;
+  _editVeicPlaca=placa;
+  document.getElementById('evPlaca').textContent=v.placa;
+  document.getElementById('evModelo').value=v.modelo||'';
+  document.getElementById('evMarca').value=v.marca||'';
+  document.getElementById('evAno').value=v.ano||'';
+  document.getElementById('evTipo').value=v.tipo||'';
+  document.getElementById('evKm').value=v.km||'';
+  document.getElementById('evSetor').value=v.setor||'';
+  document.getElementById('evStatus').value=v.status||'Ativo';
+  if(!_modalVeicEdit) _modalVeicEdit=new bootstrap.Modal(document.getElementById('modalEditVeiculo'));
+  _modalVeicEdit.show();
+}
+async function salvarVeiculo(){
+  if(!_editVeicPlaca) return;
+  const body={ modelo:document.getElementById('evModelo').value.trim(),
+    marca:document.getElementById('evMarca').value.trim(),
+    ano:document.getElementById('evAno').value.trim(), tipo:document.getElementById('evTipo').value.trim(),
+    km:document.getElementById('evKm').value.trim(), setor:document.getElementById('evSetor').value.trim(),
+    status:document.getElementById('evStatus').value };
+  try{
+    const r=await fetch(`/api/frota/${_editVeicPlaca}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.status===401){ showToast('Sua sessão venceu. Faça login de novo (F5).','danger'); return; }
+    const d=await r.json();
+    if(!d.success){ showToast(d.error||'Erro.','danger'); return; }
+    if(_modalVeicEdit) _modalVeicEdit.hide();
+    showToast(`Veículo ${_editVeicPlaca} atualizado!`,'success');
+    loadFrota(); buildSidebarFrota(allFrota);
+  }catch(e){ showToast('Sem conexão com o servidor.','danger'); }
+}
 
 /* ─── Minhas Solicitações (operador) + notificações ───────────────────── */
 function renderMinhas(arr){
@@ -1730,12 +2420,22 @@ function loadAtividade(){
       aprovar_solicitacao:['bi-check-circle','#1a8a4a','autorizou'],
       recusar_solicitacao:['bi-x-circle','#b02a37','recusou'],
       baixa_direta:['bi-box-arrow-up','var(--brand-orange)','deu baixa direta'],
-      editar_peca:['bi-pencil','#0d9488','editou uma peça']};
+      editar_peca:['bi-pencil','#0d9488','editou uma peça'],
+      editar_movimentacao:['bi-pencil-square','#b02a37','CORRIGIU uma movimentação'],
+      criar_veiculo:['bi-truck-front','#0a6d80','cadastrou um veículo'],
+      editar_veiculo:['bi-truck-front','#0d9488','editou um veículo']};
     const disp=ua=>{
       if(!ua) return '';
       const cel=/Mobile|Android|iPhone|iPad/i.test(ua);
       const nav=/Edg\//.test(ua)?'Edge':/Chrome\//.test(ua)?'Chrome':/Firefox\//.test(ua)?'Firefox':/Safari\//.test(ua)?'Safari':'';
       return `${cel?'📱 Celular':'💻 Computador'}${nav?' · '+nav:''}`;
+    };
+    // Limpa o IP: tira o prefixo ::ffff: e mostra "este servidor" p/ localhost
+    const limpaIp=ip=>{
+      if(!ip) return '';
+      let x=String(ip).replace(/^::ffff:/,'');
+      if(x==='::1'||x==='127.0.0.1'||x==='192.168.1.61') return x+' (este PC)';
+      return x;
     };
     wrap.innerHTML='<div class="table-responsive"><table class="table table-hover align-middle mb-0"><tbody>'+
       arr.map(a=>{
@@ -1743,14 +2443,31 @@ function loadAtividade(){
         const dt=new Date(a.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
         let detalhe='';
         const dd=a.dados_depois||{};
+        const da=a.dados_antes||{};
         if(a.acao==='login') detalhe=`entrou como <b>${(dd.papel||'').toString()}</b>`;
+        else if(a.acao==='editar_movimentacao'){
+          const mudancas=[];
+          if(da.quantidade!==dd.quantidade) mudancas.push(`qtd ${da.quantidade} → <b>${dd.quantidade}</b>`);
+          if(da.custo_unitario!==dd.custo_unitario) mudancas.push(`custo ${_fmtBRL(da.custo_unitario)} → <b>${_fmtBRL(dd.custo_unitario)}</b>`);
+          if((da.placa||'')!==(dd.placa||'')) mudancas.push(`veículo ${da.placa||'—'} → <b>${dd.placa||'—'}</b>`);
+          if((da.responsavel||'')!==(dd.responsavel||'')) mudancas.push(`responsável ${da.responsavel||'—'} → <b>${dd.responsavel||'—'}</b>`);
+          if((da.observacoes||'')!==(dd.observacoes||'')) mudancas.push('observação alterada');
+          detalhe=`${dd.peca_nome||''} (${a.entidade_id})`
+            +(mudancas.length?`<div style="font-size:.74rem">${mudancas.join(' · ')}</div>`:'')
+            +`<div class="mt-1 p-2 rounded" style="background:#fff8e6;border-left:3px solid #F5941D;font-size:.76rem">
+                <b>Motivo:</b> ${dd.motivo_edicao||'—'}</div>`;
+        }
         else if(dd.tipo) detalhe=`${dd.tipo} · ${dd.peca_nome||''}${dd.quantidade_solicitada?` (${dd.quantidade_solicitada})`:''}`;
         else if(dd.peca_nome||dd.nome) detalhe=dd.peca_nome||dd.nome;
-        const rastro=[a.ip,disp(a.user_agent)].filter(Boolean).join(' · ');
+        else if(dd.placa) detalhe=`${dd.placa} ${dd.modelo||''}`;
+        const ipTxt=limpaIp(a.ip), dispTxt=disp(a.user_agent);
+        const rastro=ipTxt
+          ? `<span class="badge" style="background:#eef1f8;color:#3a3f5c;font-weight:600"><i class="bi bi-geo-alt-fill me-1" style="color:var(--brand-orange)"></i>IP ${ipTxt}</span>${dispTxt?` <span class="text-muted">${dispTxt}</span>`:''}`
+          : (dispTxt?`<span class="text-muted">${dispTxt}</span>`:'');
         return `<tr>
           <td style="width:36px"><i class="bi ${meta[0]}" style="color:${meta[1]};font-size:1.2rem"></i></td>
           <td><b>${a.usuario_nome||'—'}</b> ${meta[2]} ${detalhe?`<span class="text-muted">— ${detalhe}</span>`:''}
-            ${rastro?`<div class="text-muted" style="font-size:.7rem">${rastro}</div>`:''}</td>
+            ${rastro?`<div class="mt-1" style="font-size:.72rem">${rastro}</div>`:''}</td>
           <td class="text-end text-muted small text-nowrap">${dt}</td>
         </tr>`;
       }).join('')+'</tbody></table></div>';
@@ -1759,20 +2476,41 @@ function loadAtividade(){
 
 /* ─── QR Code de acesso ───────────────────────────────────────────────── */
 let _qrModalBs=null;
-function openQrModal(){
-  const url=window.location.origin+'/login';
-  const area=document.getElementById('qrArea'); area.innerHTML='';
-  document.getElementById('qrUrl').textContent=url;
-  if(typeof QRCode==='undefined'){ area.innerHTML='<div class="text-danger small">Biblioteca de QR não carregou (verifique a internet).</div>'; }
-  else { new QRCode(area,{text:url,width:220,height:220,colorDark:'#1B2B6E',colorLight:'#ffffff'}); }
+let _qrUrlAtual='';
+// O QR SEMPRE aponta para o IP do servidor na rede (nunca localhost, que no
+// celular apontaria para o próprio celular). O servidor informa o IP dele.
+async function urlDeAcesso(){
+  try{
+    const d=await fetch('/api/endereco-lan').then(r=>r.json());
+    if(d && d.base) return d.base+'/rapido';
+  }catch(_){}
+  return window.location.origin+'/rapido';   // reserva
+}
+async function openQrModal(){
+  const area=document.getElementById('qrArea'); area.innerHTML='<span class="spinner-border spinner-border-sm"></span>';
   if(!_qrModalBs) _qrModalBs=new bootstrap.Modal(document.getElementById('modalQr'));
   _qrModalBs.show();
+  const url=await urlDeAcesso();
+  _qrUrlAtual=url;
+  document.getElementById('qrUrl').textContent=url;
+  area.innerHTML='';
+  if(typeof QRCode==='undefined'){
+    area.innerHTML='<div class="text-danger small">Não foi possível carregar o gerador de QR. Atualize a página com Ctrl+Shift+R.</div>';
+    return;
+  }
+  new QRCode(area,{text:url,width:220,height:220,colorDark:'#1B2B6E',colorLight:'#ffffff'});
+  // Aviso se por algum motivo o endereço não for de rede (QR não funcionaria no celular)
+  const aviso=document.getElementById('qrAviso');
+  if(aviso){
+    const ehLocalhost=/localhost|127\.0\.0\.1/.test(url);
+    aviso.style.display=ehLocalhost?'':'none';
+  }
 }
 function imprimirQr(){
   const img=document.querySelector('#qrArea img, #qrArea canvas');
   let qrHtml='';
   if(img){ qrHtml = img.tagName==='CANVAS' ? `<img src="${img.toDataURL()}" style="width:320px;height:320px">` : `<img src="${img.src}" style="width:320px;height:320px">`; }
-  const url=window.location.origin+'/login';
+  // O endereço NÃO vai na folha impressa (basta o QR) — ele fica só na tela, para conferência.
   const w=window.open('','_blank');
   w.document.write(`<html><head><title>QR Acesso — Bolsão Peças</title><style>
     @page{size:A4;margin:0} body{margin:0;font-family:Arial,sans-serif;text-align:center;padding:60px 40px}
@@ -1780,15 +2518,21 @@ function imprimirQr(){
     .sub{color:#F5941D;font-weight:700;font-size:18px;margin-bottom:40px}
     .qr{margin:30px auto}
     h1{color:#1B2B6E;font-size:26px;margin:20px 0 6px} p{color:#555;font-size:16px;line-height:1.5}
-    .url{margin-top:24px;font-size:14px;color:#888}
     .foot{margin-top:60px;color:#1B2B6E;font-weight:700}
   </style></head><body>
     <div class="logo">🔧 BOLSÃO PEÇAS</div>
     <div class="sub">Comercial Bolsão de Bebidas — Guarulhos/SP</div>
     <div class="qr">${qrHtml}</div>
-    <h1>Acesso ao Estoque</h1>
-    <p>Aponte a câmera do celular para o QR Code.<br>Entre com <b>seu login e senha</b>.<br>Registre a <b>baixa</b> ou <b>entrada</b> de peças.</p>
-    <div class="url">${url}</div>
+    <h1>Peças e Ferramentas</h1>
+    <p style="font-weight:700;color:#1B2B6E;margin-bottom:14px">
+       Pegou peça, óleo, água ou <b>ferramenta</b>?<br>Registre aqui ANTES de levar.</p>
+    <p>1. Aponte a câmera do celular para o QR Code<br>
+       2. Escolha: <b>📦 Retirar Peça</b> ou <b>🛠️ Ferramenta</b><br>
+       3. Peça: preencha <b>nome, setor, veículo e o motivo</b><br>
+       4. Ferramenta: informe <b>nome e cargo</b> — e ao devolver,<br>
+       &nbsp;&nbsp;&nbsp;tire a <b>foto da ferramenta no lugar</b></p>
+    <p style="margin-top:18px;color:#F5941D;font-weight:700">Conecte-se ao Wi-Fi da empresa.<br>
+       O item só sai do estoque após autorização.</p>
     <div class="foot">Almoxarifado / Oficina</div>
     <script>window.onload=()=>window.print()<\/script>
   </body></html>`);
@@ -2047,16 +2791,70 @@ async function submitNovaPeca(){
 function _renderMovsTable(list,q){
   const wrap=document.getElementById('movsTableWrap');
   if(!list.length){wrap.innerHTML='<div class="p-4 text-center text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>'+(q?'Nenhum resultado.':'Nenhuma movimentação.')+'</div>';return;}
+  const adm=isAdmin();
   wrap.innerHTML=`<div class="table-responsive"><table class="table table-hover table-sm mb-0">
-    <thead class="table-dark"><tr><th>Data</th><th>Tipo</th><th>Peça</th><th>Responsável</th><th>Veículo</th><th class="text-center">Qtd</th><th class="text-end">Valor</th><th>Obs</th></tr></thead>
-    <tbody>${list.map(m=>`<tr><td>${new Date((m.data||'')+'T12:00:00').toLocaleDateString('pt-BR')}</td>
+    <thead class="table-dark"><tr><th>Data</th><th>Tipo</th><th>Peça</th><th>Responsável</th><th>Veículo</th><th class="text-center">Qtd</th><th class="text-end">Valor</th><th>Obs</th>${adm?'<th></th>':''}</tr></thead>
+    <tbody>${list.map(m=>{
+      const selo=m.editada?` <span class="badge bg-secondary" style="font-size:.6rem" title="Este lançamento foi corrigido — veja o motivo em Atividade">✎ editada</span>`:'';
+      return `<tr><td>${new Date((m.data||'')+'T12:00:00').toLocaleDateString('pt-BR')}</td>
       <td>${m.tipo==='entrada'?'<span class="badge" style="background:var(--brand-cyan)">⬇ Entrada</span>':'<span class="badge" style="background:var(--brand-orange)">⬆ Saída</span>'}</td>
-      <td><a href="#" onclick="openModal('${m.peca_id}');return false" class="fw-semibold">${m.peca_nome}</a>${m.peca_codigo?`<div class="text-muted" style="font-size:.74rem">${m.peca_codigo}</div>`:''}</td>
+      <td><a href="#" onclick="openModal('${m.peca_id}');return false" class="fw-semibold">${m.peca_nome}</a>${selo}${m.peca_codigo?`<div class="text-muted" style="font-size:.74rem">${m.peca_codigo}</div>`:''}</td>
       <td>${m.responsavel||'—'}</td><td>${m.veiculo||'—'}</td>
       <td class="text-center"><span class="badge" style="background:${m.tipo==='entrada'?'var(--brand-cyan)':'var(--brand-orange)'}">${m.quantidade}</span></td>
       <td class="text-end fw-semibold">${m.valor_total!=null?_fmtBRL(m.valor_total):'—'}</td>
-      <td class="text-muted small">${m.observacoes||''}</td></tr>`).join('')}
+      <td class="text-muted small">${m.observacoes||''}</td>
+      ${adm?`<td class="text-end">${m.editavel
+        ?`<button class="btn btn-sm btn-outline-secondary py-0 px-2" title="Corrigir este lançamento" onclick="openEditMov('${m.id}')"><i class="bi bi-pencil"></i></button>`
+        :`<span class="text-muted" style="font-size:.65rem" title="Registro antigo — não pode ser corrigido">—</span>`}</td>`:''}
+      </tr>`;}).join('')}
     </tbody></table></div>`;
+}
+
+/* ─── Corrigir movimentação (admin) — motivo obrigatório ──────────────── */
+let _modalEditMov=null, _movEditando=null;
+function openEditMov(id){
+  const m=(_movsCache||[]).find(x=>x.id===id); if(!m) return;
+  _movEditando=m;
+  document.getElementById('emTitulo').textContent=`${m.tipo==='entrada'?'⬇ Entrada':'⬆ Saída'} · ${m.peca_nome}`;
+  document.getElementById('emInfo').textContent=`${m.id} · lançado em ${new Date(m.criado_em).toLocaleString('pt-BR')}`;
+  document.getElementById('emQtd').value=m.quantidade;
+  document.getElementById('emCusto').value=m.custo_unitario!=null?m.custo_unitario:'';
+  document.getElementById('emVeiculo').value=m.veiculo||'';
+  document.getElementById('emResp').value=m.responsavel||'';
+  document.getElementById('emObs').value=m.observacoes||'';
+  document.getElementById('emMotivo').value='';
+  document.getElementById('emErro').style.display='none';
+  // histórico de correções anteriores
+  const h=document.getElementById('emHistorico');
+  if(m.edicoes&&m.edicoes.length){
+    h.style.display='';
+    h.innerHTML='<b>Correções anteriores:</b><br>'+m.edicoes.map(e=>
+      `• ${new Date(e.em).toLocaleString('pt-BR')} — ${e.por||'—'}: <i>"${e.motivo}"</i> (qtd era ${e.de.quantidade})`).join('<br>');
+  } else h.style.display='none';
+  if(!_modalEditMov) _modalEditMov=new bootstrap.Modal(document.getElementById('modalEditMov'));
+  _modalEditMov.show();
+}
+async function salvarEditMov(){
+  const motivo=document.getElementById('emMotivo').value.trim();
+  const err=document.getElementById('emErro');
+  if(motivo.length<3){ err.textContent='Escreva o motivo da correção — é obrigatório.'; err.style.display=''; document.getElementById('emMotivo').focus(); return; }
+  const custoRaw=document.getElementById('emCusto').value;
+  const body={ motivo,
+    quantidade:parseInt(document.getElementById('emQtd').value),
+    custo_unitario: custoRaw===''?null:Number(custoRaw),
+    placa:document.getElementById('emVeiculo').value.trim(),
+    responsavel:document.getElementById('emResp').value.trim(),
+    observacoes:document.getElementById('emObs').value.trim() };
+  try{
+    const r=await fetch(`/api/movimentacoes/${_movEditando.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.status===401){ showToast('Sua sessão venceu. Faça login de novo (F5).','danger'); return; }
+    const d=await r.json();
+    if(!d.success){ err.textContent=d.error||'Erro ao salvar.'; err.style.display=''; return; }
+    if(_modalEditMov) _modalEditMov.hide();
+    showToast('Movimentação corrigida — o motivo ficou registrado.','success');
+    loadTodasMovimentacoes(); reloadStats();
+    try{ const pr=await fetch('/api/pecas'); const pd=await pr.json(); if(pd.pecas) allPecas=pd.pecas; }catch(_){}
+  }catch(e){ err.textContent='Sem conexão com o servidor.'; err.style.display=''; }
 }
 function _filtraMovs(q){
   if(!_movsCache) return [];
@@ -2327,6 +3125,7 @@ function applyRole(){
   document.getElementById('navMinhasItem').style.display=(currentUser&&currentUser.papel==='operacao')?'':'none';
   const bnp=document.getElementById('btnNovaPeca'); if(bnp) bnp.style.display=oper?'':'none';
   const bnv=document.getElementById('btnNovoVeiculo'); if(bnv) bnv.style.display=oper?'':'none';
+  const bnf=document.getElementById('btnNovaFerramenta'); if(bnf) bnf.style.display=admin?'':'none';
   // Menu enxuto para operador/viewer: escondemos as telas de análise do admin.
   ['navDash','navPendentes','navFora','navMovs'].forEach(id=>{
     const a=document.getElementById(id); const li=a&&a.closest('li');
@@ -2450,6 +3249,24 @@ async function deletePerfil(id,nome){
 
 document.addEventListener('DOMContentLoaded',init);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modalBs)modalBs.hide();});
+
+/* ─── Ajuda (?) ───────────────────────────────────────────────────────── */
+let _ajudaBs=null;
+function abrirAjuda(secao){
+  if(!_ajudaBs) _ajudaBs=new bootstrap.Modal(document.getElementById('modalAjuda'));
+  _ajudaBs.show();
+  if(secao){
+    setTimeout(()=>{
+      const el=document.getElementById('aj-'+secao);
+      if(el){
+        // abre o item e rola até ele
+        const btn=el.querySelector('.accordion-button');
+        if(btn && btn.classList.contains('collapsed')) btn.click();
+        el.scrollIntoView({behavior:'smooth',block:'start'});
+      }
+    },350);
+  }
+}
 </script>
 </body>
 </html>

@@ -241,7 +241,8 @@ function todasMovimentacoes(catalog) {
     responsavel: m.responsavel || '', veiculo: m.veiculo || '',
     quantidade: m.quantidade, custo_unitario: null, valor_total: null,
     aprovado_por: '', observacoes: m.observacoes || '',
-    data: m.data, criado_em: m.criado_em || ((m.data || '') + 'T12:00:00.000Z')
+    data: m.data, criado_em: m.criado_em || ((m.data || '') + 'T12:00:00.000Z'),
+    editavel: false, editada: false, edicoes: []
   }));
   const razao = (catalog.movimentacoes_estoque || []).map(m => {
     const s = m.solicitacao_id ? sols[m.solicitacao_id] : null;
@@ -256,7 +257,10 @@ function todasMovimentacoes(catalog) {
       valor_total: m.valor_total != null ? m.valor_total : null,
       aprovado_por: perfis[m.usuario_id] || '',
       observacoes: m.observacoes || (s && s.observacao) || '',
-      data: (m.criado_em || '').substring(0, 10), criado_em: m.criado_em
+      data: (m.criado_em || '').substring(0, 10), criado_em: m.criado_em,
+      editavel: true,                       // só o livro-razão pode ser corrigido
+      editada: !!m.editada,
+      edicoes: m.edicoes || []
     };
   });
   return legacy.concat(razao).sort((a, b) => (a.criado_em || '').localeCompare(b.criado_em || ''));
@@ -351,9 +355,13 @@ app.use(async (req, res, next) => {
 });
 
 // Guard de autenticação (antes do static — protege também o SPA)
-const _ROTAS_PUBLICAS = ['/health', '/portal-auth', '/login', '/logout', '/api/resumo'];
+// Exceções: tela de acesso rápido por QR (/rapido) + suas rotas /api/publico/*.
+// Elas NÃO movem estoque — só criam solicitação pendente, que o admin autoriza.
+const _ROTAS_PUBLICAS  = ['/health', '/portal-auth', '/login', '/logout', '/api/resumo', '/rapido'];
+const _PREFIXOS_PUBLICOS = ['/api/publico/', '/fotos/'];   // fotos das peças aparecem na tela do QR
 app.use((req, res, next) => {
   if (_ROTAS_PUBLICAS.includes(req.path)) return next();
+  if (_PREFIXOS_PUBLICOS.some(p => req.path.startsWith(p))) return next();
   if (validarAuthCookie(getCookie(req, 'pecas_auth'))) return next();
   if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'não autenticado' });
   return res.redirect('/login');
@@ -469,6 +477,12 @@ app.get('/api/frota', (req, res) => {
   res.json({ total: catalog.frota.length, frota: catalog.frota });
 });
 
+// Campos extras do veículo (vindos do Relatório de Frota)
+const CAMPOS_VEICULO = ['ano', 'tipo', 'km', 'setor', 'status', 'observacoes'];
+function aplicarCamposVeiculo(alvo, body) {
+  CAMPOS_VEICULO.forEach(f => { if (body[f] !== undefined) alvo[f] = body[f]; });
+}
+
 // Cadastro direto de veículo (só admin). Operação usa solicitação tipo 'veiculo'.
 app.post('/api/frota', ensureAdmin, (req, res) => {
   const catalog = loadCatalog();
@@ -477,10 +491,27 @@ app.post('/api/frota', ensureAdmin, (req, res) => {
   const pl = String(placa).toUpperCase().trim();
   if ((catalog.frota || []).some(v => v.placa.toUpperCase() === pl))
     return res.status(409).json({ error: 'Já existe um veículo com esta placa' });
-  const veiculo = { placa: pl, modelo: String(modelo).trim(), marca: (marca || '').trim() };
+  const veiculo = { placa: pl, modelo: String(modelo).trim(), marca: (marca || '').trim(), status: 'Ativo' };
+  aplicarCamposVeiculo(veiculo, req.body);
   catalog.frota.push(veiculo);
   saveCatalog(catalog);
+  registrarAuditoria(catalog, getPerfilFromReq(req), 'criar_veiculo', 'veiculo', pl, null, veiculo, req);
   res.json({ success: true, veiculo });
+});
+
+// Editar veículo (só admin) — usado pela aba Frota.
+app.put('/api/frota/:placa', ensureAdmin, (req, res) => {
+  const catalog = loadCatalog();
+  const pl = String(req.params.placa).toUpperCase().trim();
+  const idx = (catalog.frota || []).findIndex(v => v.placa.toUpperCase() === pl);
+  if (idx === -1) return res.status(404).json({ error: 'Veículo não encontrado' });
+  const antes = JSON.parse(JSON.stringify(catalog.frota[idx]));
+  if (req.body.modelo) catalog.frota[idx].modelo = String(req.body.modelo).trim();
+  if (req.body.marca !== undefined) catalog.frota[idx].marca = String(req.body.marca).trim();
+  aplicarCamposVeiculo(catalog.frota[idx], req.body);
+  saveCatalog(catalog);
+  registrarAuditoria(catalog, getPerfilFromReq(req), 'editar_veiculo', 'veiculo', pl, antes, catalog.frota[idx], req);
+  res.json({ success: true, veiculo: catalog.frota[idx] });
 });
 
 app.get('/api/frota/:placa/pecas', (req, res) => {
@@ -489,6 +520,102 @@ app.get('/api/frota/:placa/pecas', (req, res) => {
   if (!veiculo) return res.status(404).json({ error: 'Veículo não encontrado' });
   const pecas = catalog.pecas.filter(p => p.veiculos_compativeis.some(v => v.includes(req.params.placa.toUpperCase())));
   res.json({ veiculo, total_pecas: pecas.length, pecas });
+});
+
+// ─── FERRAMENTAS ──────────────────────────────────────────────────────────────
+// Ferramenta é emprestada (não consome estoque): sai com uma pessoa, conta o tempo,
+// e só volta a ficar disponível quando devolvida COM foto do lugar limpo.
+function nextFerId(catalog) {
+  const arr = catalog.ferramentas || [];
+  const max = arr.reduce((m, f) => { const n = parseInt((f.id || '').replace('FER', '')); return n > m ? n : m; }, 0);
+  return 'FER' + String(max + 1).padStart(3, '0');
+}
+function nextEmpId(catalog) {
+  const arr = catalog.emprestimos || [];
+  const max = arr.reduce((m, e) => { const n = parseInt((e.id || '').replace('EMP', '')); return n > m ? n : m; }, 0);
+  return 'EMP' + String(max + 1).padStart(4, '0');
+}
+// Empréstimo em aberto de uma ferramenta (ou null)
+function emprestimoAberto(catalog, ferramentaId) {
+  return (catalog.emprestimos || []).find(e => e.ferramenta_id === ferramentaId && e.status === 'em_uso') || null;
+}
+// Ferramenta + situação atual (quem está com ela e desde quando)
+function ferramentaComStatus(catalog, f) {
+  const emp = emprestimoAberto(catalog, f.id);
+  return {
+    id: f.id, nome: f.nome, codigo: f.codigo || '', descricao: f.descricao || '',
+    local: f.local || '', fotos: f.fotos || [],
+    status: emp ? 'em_uso' : 'disponivel',
+    com_quem: emp ? emp.pessoa_nome : null,
+    cargo: emp ? emp.cargo : null,
+    desde: emp ? emp.retirado_em : null,
+    emprestimo_id: emp ? emp.id : null
+  };
+}
+
+app.get('/api/ferramentas', (req, res) => {
+  const catalog = loadCatalog();
+  const lista = (catalog.ferramentas || []).map(f => ferramentaComStatus(catalog, f));
+  res.json({ total: lista.length, ferramentas: lista });
+});
+
+app.post('/api/ferramentas', ensureAdmin, (req, res) => {
+  const { nome, codigo, descricao, local, fotos } = req.body;
+  if (!nome || !String(nome).trim()) return res.status(400).json({ error: 'Nome da ferramenta é obrigatório' });
+  const catalog = loadCatalog();
+  if (!catalog.ferramentas) catalog.ferramentas = [];
+  const ferramenta = {
+    id: nextFerId(catalog), nome: String(nome).trim(), codigo: (codigo || '').trim(),
+    descricao: (descricao || '').trim(), local: (local || '').trim(),
+    fotos: Array.isArray(fotos) ? fotos : [], criado_em: new Date().toISOString()
+  };
+  catalog.ferramentas.push(ferramenta);
+  saveCatalog(catalog);
+  registrarAuditoria(catalog, getPerfilFromReq(req), 'criar_ferramenta', 'ferramenta', ferramenta.id, null, ferramenta, req);
+  res.json({ success: true, ferramenta });
+});
+
+app.put('/api/ferramentas/:id', ensureAdmin, (req, res) => {
+  const catalog = loadCatalog();
+  const idx = (catalog.ferramentas || []).findIndex(f => f.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Ferramenta não encontrada' });
+  ['nome', 'codigo', 'descricao', 'local'].forEach(c => {
+    if (req.body[c] !== undefined) catalog.ferramentas[idx][c] = String(req.body[c]).trim();
+  });
+  saveCatalog(catalog);
+  res.json({ success: true, ferramenta: catalog.ferramentas[idx] });
+});
+
+app.delete('/api/ferramentas/:id', ensureAdmin, (req, res) => {
+  const catalog = loadCatalog();
+  const idx = (catalog.ferramentas || []).findIndex(f => f.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Ferramenta não encontrada' });
+  if (emprestimoAberto(catalog, req.params.id))
+    return res.status(400).json({ error: 'Esta ferramenta está emprestada. Registre a devolução antes de excluir.' });
+  catalog.ferramentas.splice(idx, 1);
+  saveCatalog(catalog);
+  res.json({ success: true });
+});
+
+app.post('/api/ferramentas/:id/fotos', ensureAdmin, upload.array('fotos', 10), (req, res) => {
+  if (!req.files || !req.files.length) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+  const catalog = loadCatalog();
+  const idx = (catalog.ferramentas || []).findIndex(f => f.id === req.params.id);
+  if (idx === -1) { req.files.forEach(f => { try { fs.unlinkSync(f.path); } catch (_) {} }); return res.status(404).json({ error: 'Ferramenta não encontrada' }); }
+  const nomes = req.files.map(f => f.filename);
+  catalog.ferramentas[idx].fotos = [...(catalog.ferramentas[idx].fotos || []), ...nomes];
+  saveCatalog(catalog);
+  res.json({ success: true, fotos: nomes });
+});
+
+// Empréstimos (histórico). Admin vê tudo; demais veem os em aberto.
+app.get('/api/emprestimos', (req, res) => {
+  const perfil = getPerfilFromReq(req);
+  if (!perfil) return res.status(401).json({ error: 'não autenticado' });
+  const catalog = loadCatalog();
+  let arr = (catalog.emprestimos || []).slice().reverse();
+  if (req.query.status) arr = arr.filter(e => e.status === req.query.status);
+  res.json({ total: arr.length, emprestimos: arr });
 });
 
 // ─── CATEGORIAS ───────────────────────────────────────────────────────────────
@@ -596,6 +723,95 @@ app.post('/api/movimentacoes', ensureAdmin, (req, res) => {
       saveCatalog(catalog);
       registrarAuditoria(catalog, perfil, 'baixa_direta', 'movimentacao', mov.id, null, mov, req);
       res.json({ success: true, movimentacao: mov, nova_quantidade: saldoNovo });
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  }).catch(e => { if (!res.headersSent) res.status(500).json({ error: e.message }); });
+});
+
+// ─── ENDEREÇO NA REDE (para o QR Code) ───────────────────────────────────
+// O QR precisa apontar para o IP do servidor na rede local — nunca "localhost",
+// que no celular apontaria para o próprio celular.
+app.get('/api/endereco-lan', (req, res) => {
+  const os = require('os');
+  let ip = null;
+  const ifaces = os.networkInterfaces();
+  for (const nome of Object.keys(ifaces)) {
+    for (const i of ifaces[nome] || []) {
+      if (i.family === 'IPv4' && !i.internal && !/^169\.254\./.test(i.address)) {
+        // prefere a rede local comum (192.168.x / 10.x / 172.16-31.x)
+        if (/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(i.address)) { ip = i.address; break; }
+        if (!ip) ip = i.address;
+      }
+    }
+    if (ip && /^192\.168\./.test(ip)) break;
+  }
+  const porta = String(PORT);
+  res.json({ ip, porta, base: ip ? `http://${ip}:${porta}` : null });
+});
+
+// ─── EDITAR MOVIMENTAÇÃO (admin) ──────────────────────────────────────────────
+// Corrige um lançamento errado. O MOTIVO é obrigatório e tudo fica na auditoria.
+// Se a quantidade mudar, o saldo da peça é corrigido pela diferença (serializado).
+app.put('/api/movimentacoes/:id', ensureAdmin, (req, res) => {
+  const perfil = getPerfilFromReq(req);
+  const motivo = String(req.body.motivo || '').trim();
+  if (motivo.length < 3)
+    return res.status(400).json({ error: 'O motivo da edição é obrigatório (mínimo 3 letras).' });
+
+  serializarEscrita(() => {
+    const catalog = loadCatalog();
+    const id = req.params.id;
+    const mov = (catalog.movimentacoes_estoque || []).find(m => m.id === id);
+    if (!mov) { res.status(404).json({ error: 'Movimentação não encontrada. Registros antigos não podem ser editados.' }); return; }
+
+    const antes = JSON.parse(JSON.stringify(mov));
+    try {
+      // ── quantidade: corrige o saldo pela diferença ──
+      if (req.body.quantidade !== undefined) {
+        const nova = parseInt(req.body.quantidade);
+        if (!Number.isInteger(nova) || nova <= 0) throw new Error('Quantidade inválida.');
+        const dif = nova - mov.quantidade;
+        if (dif !== 0) {
+          const idxP = catalog.pecas.findIndex(p => p.id === mov.peca_id);
+          if (idxP === -1) throw new Error('Peça desta movimentação não existe mais.');
+          // entrada: +dif no estoque | saída: -dif no estoque
+          const delta = mov.tipo === 'entrada' ? dif : -dif;
+          const saldoAtual = catalog.pecas[idxP].quantidade || 0;
+          const saldoNovo  = saldoAtual + delta;
+          if (saldoNovo < 0) throw new Error(`Correção deixaria o estoque negativo (ficaria ${saldoNovo}).`);
+          catalog.pecas[idxP].quantidade = saldoNovo;
+          mov.saldo_novo = (mov.saldo_anterior || 0) + (mov.tipo === 'entrada' ? nova : -nova);
+        }
+        mov.quantidade = nova;
+      }
+      // ── demais campos ──
+      if (req.body.custo_unitario !== undefined) {
+        const c = req.body.custo_unitario === '' || req.body.custo_unitario === null ? null : Number(req.body.custo_unitario);
+        if (c !== null && (isNaN(c) || c < 0)) throw new Error('Custo inválido.');
+        mov.custo_unitario = c;
+      }
+      if (req.body.placa       !== undefined) mov.placa       = String(req.body.placa || '').toUpperCase().trim() || null;
+      if (req.body.responsavel !== undefined) mov.responsavel = String(req.body.responsavel || '').trim() || null;
+      if (req.body.observacoes !== undefined) mov.observacoes = String(req.body.observacoes || '').trim() || null;
+
+      // valor total sempre recalculado
+      mov.valor_total = mov.custo_unitario != null
+        ? Math.round(mov.custo_unitario * mov.quantidade * 100) / 100 : null;
+
+      // marca que foi editada (fica visível no histórico)
+      if (!mov.edicoes) mov.edicoes = [];
+      mov.edicoes.push({
+        motivo, por: perfil ? perfil.nome : null, em: new Date().toISOString(),
+        de: { quantidade: antes.quantidade, custo_unitario: antes.custo_unitario,
+              placa: antes.placa, responsavel: antes.responsavel, observacoes: antes.observacoes },
+      });
+      mov.editada = true;
+
+      saveCatalog(catalog);
+      registrarAuditoria(catalog, perfil, 'editar_movimentacao', 'movimentacao', mov.id,
+        antes, Object.assign({}, mov, { motivo_edicao: motivo }), req);
+      res.json({ success: true, movimentacao: mov });
     } catch (e) {
       res.status(400).json({ error: e.message });
     }
@@ -901,6 +1117,142 @@ app.get('/api/movimentacoes/export', (req, res) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="movimentacoes_' + new Date().toISOString().split('T')[0] + '.csv"');
   res.send('\ufeff' + [hdr, ...rows].join('\r\n'));
+});
+
+// ─── ACESSO RÁPIDO POR QR (sem login, só na rede da empresa) ────────────────────
+// A pessoa escaneia o QR, vê as peças e pede a baixa preenchendo nome/setor/veículo/motivo.
+// NADA aqui move estoque: só cria solicitação 'pendente' para o admin autorizar.
+// Não expõe custo/preço — a tela do QR é só operação.
+
+// Limite anti-abuso: no máx. 20 pedidos por IP a cada 10 min.
+const _pedidosPublicos = new Map();
+function limitePublico(ip) {
+  const agora = Date.now(), janela = 10 * 60 * 1000, max = 20;
+  const e = _pedidosPublicos.get(ip);
+  if (!e || agora - e.inicio > janela) { _pedidosPublicos.set(ip, { count: 1, inicio: agora }); return true; }
+  if (e.count >= max) return false;
+  e.count++; return true;
+}
+function ipDaReq(req) {
+  return ((req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'desconhecido').split(',')[0]).trim();
+}
+
+app.get('/rapido', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rapido.html')));
+
+// Peças visíveis na tela do QR (sem custo/preço)
+app.get('/api/publico/pecas', (req, res) => {
+  const catalog = loadCatalog();
+  const pecas = (catalog.pecas || []).map(p => ({
+    id: p.id, nome: p.nome, codigo: p.codigo || '', fabricante: p.fabricante || '',
+    categoria: p.categoria || '', quantidade: p.quantidade || 0,
+    veiculos_compativeis: p.veiculos_compativeis || [], fotos: p.fotos || []
+  }));
+  res.json({ total: pecas.length, pecas });
+});
+
+app.get('/api/publico/frota', (req, res) => {
+  const catalog = loadCatalog();
+  res.json({ frota: (catalog.frota || []).map(v => ({ placa: v.placa, modelo: v.modelo, marca: v.marca || '' })) });
+});
+
+// ── Ferramentas na tela do QR (sem login) ──
+app.get('/api/publico/ferramentas', (req, res) => {
+  const catalog = loadCatalog();
+  const lista = (catalog.ferramentas || []).map(f => ferramentaComStatus(catalog, f));
+  res.json({ total: lista.length, ferramentas: lista });
+});
+
+// RETIRADA de ferramenta pelo QR: nome + cargo obrigatórios. O relógio começa aqui.
+app.post('/api/publico/emprestimos', (req, res) => {
+  const ip = ipDaReq(req);
+  if (!limitePublico(ip)) return res.status(429).json({ error: 'Muitos pedidos deste aparelho. Aguarde alguns minutos.' });
+
+  const nome  = String(req.body.nome  || '').trim();
+  const cargo = String(req.body.cargo || '').trim();
+  const obs   = String(req.body.observacao || '').trim();
+  if (!nome || nome.length < 3) return res.status(400).json({ error: 'Informe seu nome completo.' });
+  if (!cargo)                   return res.status(400).json({ error: 'Informe o seu cargo.' });
+
+  const catalog = loadCatalog();
+  const ferramenta = (catalog.ferramentas || []).find(f => f.id === req.body.ferramenta_id);
+  if (!ferramenta) return res.status(404).json({ error: 'Ferramenta não encontrada.' });
+  const aberto = emprestimoAberto(catalog, ferramenta.id);
+  if (aberto) return res.status(409).json({ error: `Esta ferramenta já está com ${aberto.pessoa_nome} desde ${new Date(aberto.retirado_em).toLocaleString('pt-BR')}.` });
+
+  if (!catalog.emprestimos) catalog.emprestimos = [];
+  const emp = {
+    id: nextEmpId(catalog),
+    ferramenta_id: ferramenta.id, ferramenta_nome: ferramenta.nome, ferramenta_codigo: ferramenta.codigo || '',
+    pessoa_nome: nome, cargo, observacao: obs,
+    status: 'em_uso',
+    retirado_em: new Date().toISOString(),      // SEMPRE do servidor
+    devolvido_em: null, foto_devolucao: null, observacao_devolucao: '',
+    via_qr: true
+  };
+  catalog.emprestimos.push(emp);
+  saveCatalog(catalog);
+  registrarAuditoria(catalog, { id: null, nome: `${nome} (QR · ${cargo})` }, 'retirar_ferramenta', 'emprestimo', emp.id, null, emp, req);
+  res.json({ success: true, emprestimo: emp });
+});
+
+// DEVOLUÇÃO pelo QR: exige FOTO da ferramenta no lugar, limpa.
+app.post('/api/publico/emprestimos/:id/devolver', upload.single('foto'), (req, res) => {
+  const catalog = loadCatalog();
+  const emp = (catalog.emprestimos || []).find(e => e.id === req.params.id);
+  if (!emp) { if (req.file) { try { fs.unlinkSync(req.file.path); } catch (_) {} } return res.status(404).json({ error: 'Empréstimo não encontrado.' }); }
+  if (emp.status !== 'em_uso') { if (req.file) { try { fs.unlinkSync(req.file.path); } catch (_) {} } return res.status(409).json({ error: 'Esta ferramenta já foi devolvida.' }); }
+  if (!req.file) return res.status(400).json({ error: 'A foto da ferramenta no lugar é obrigatória.' });
+
+  emp.status = 'devolvido';
+  emp.devolvido_em = new Date().toISOString();   // SEMPRE do servidor
+  emp.foto_devolucao = req.file.filename;
+  emp.observacao_devolucao = String(req.body.observacao || '').trim();
+  emp.devolvido_por = String(req.body.nome || emp.pessoa_nome).trim();
+  saveCatalog(catalog);
+  registrarAuditoria(catalog, { id: null, nome: `${emp.devolvido_por} (QR)` }, 'devolver_ferramenta', 'emprestimo', emp.id, null, emp, req);
+  res.json({ success: true, emprestimo: emp });
+});
+
+// Pedido de baixa pelo QR. TODOS os campos são obrigatórios. Data/hora = do servidor.
+app.post('/api/publico/solicitacoes', (req, res) => {
+  const ip = ipDaReq(req);
+  if (!limitePublico(ip)) return res.status(429).json({ error: 'Muitos pedidos deste aparelho. Aguarde alguns minutos.' });
+
+  const nome  = String(req.body.nome  || '').trim();
+  const setor = String(req.body.setor || '').trim();
+  const placa = String(req.body.placa || '').trim().toUpperCase();
+  const obs   = String(req.body.observacao || '').trim();
+  const qtd   = parseInt(req.body.quantidade);
+
+  if (!nome  || nome.length  < 3) return res.status(400).json({ error: 'Informe seu nome completo.' });
+  if (!setor)                     return res.status(400).json({ error: 'Informe o setor.' });
+  if (!placa)                     return res.status(400).json({ error: 'Selecione o veículo.' });
+  if (!obs   || obs.length   < 3) return res.status(400).json({ error: 'Descreva o motivo da troca.' });
+  if (!Number.isInteger(qtd) || qtd <= 0) return res.status(400).json({ error: 'Informe a quantidade.' });
+
+  const catalog = loadCatalog();
+  const peca = (catalog.pecas || []).find(p => p.id === req.body.peca_id);
+  if (!peca) return res.status(404).json({ error: 'Peça não encontrada.' });
+  const veiculo = (catalog.frota || []).find(v => v.placa.toUpperCase() === placa);
+  if (!veiculo) return res.status(400).json({ error: 'Veículo não cadastrado na frota.' });
+  if ((peca.quantidade || 0) < qtd)
+    return res.status(400).json({ error: `Estoque insuficiente. Disponível: ${peca.quantidade || 0}` });
+
+  if (!catalog.solicitacoes) catalog.solicitacoes = [];
+  const sol = {
+    id: nextSolId(catalog), tipo: 'baixa', status: 'pendente',
+    peca_id: peca.id, peca_nome: peca.nome, peca_codigo: peca.codigo || '',
+    placa, quantidade_solicitada: qtd, quantidade_aprovada: null,
+    observacao: obs,
+    setor, via_qr: true,                       // veio da tela do QR (nome declarado, sem login)
+    solicitante_id: null, solicitante_nome: nome,
+    criado_em: new Date().toISOString(),       // SEMPRE do servidor
+    aprovado_por: null, aprovado_por_nome: null, aprovado_em: null, motivo_recusa: null
+  };
+  catalog.solicitacoes.push(sol);
+  saveCatalog(catalog);
+  registrarAuditoria(catalog, { id: null, nome: `${nome} (QR · ${setor})` }, 'criar_solicitacao', 'solicitacao', sol.id, null, sol, req);
+  res.json({ success: true, solicitacao: sol });
 });
 
 // ─── SOLICITAÇÕES (fila de autorização) ─────────────────────────────────────────
