@@ -970,9 +970,12 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body text-center">
-        <p class="text-muted small">O funcionário escaneia com o celular <b>conectado no Wi-Fi da empresa</b> e entra com o login e senha que você criou. Imprima e cole no almoxarifado.</p>
+        <p class="text-muted small">O funcionário escaneia com o celular e entra com o login e senha que você criou. Imprima e cole no almoxarifado.</p>
         <div id="qrArea" class="d-flex justify-content-center my-3"></div>
         <div class="small text-muted" id="qrUrl"></div>
+        <div class="alert alert-success small mt-2 mb-0" id="qrPublico" style="display:none">
+          <i class="bi bi-globe me-1"></i>Link público — funciona no Wi-Fi <b>e</b> em dados móveis, de qualquer lugar.
+        </div>
         <div class="alert alert-warning small mt-2 mb-0" id="qrAviso" style="display:none">
           <i class="bi bi-exclamation-triangle me-1"></i>Este endereço não vai funcionar no celular. Abra o sistema pelo IP da rede (ex.: <b>http://192.168.1.61:3200</b>) e gere o QR de novo.
         </div>
@@ -2482,9 +2485,13 @@ let _qrModalBs=null;
 let _qrUrlAtual='';
 // O QR SEMPRE aponta para o IP do servidor na rede (nunca localhost, que no
 // celular apontaria para o próprio celular). O servidor informa o IP dele.
+let _ehLinkPublico=false;
 async function urlDeAcesso(){
+  _ehLinkPublico=false;
   try{
     const d=await fetch('/api/endereco-lan').then(r=>r.json());
+    // Prioridade: link público (funciona em dados móveis e Wi-Fi) > IP local (só Wi-Fi da empresa)
+    if(d && d.publica){ _ehLinkPublico=true; return d.publica+'/rapido'; }
     if(d && d.base) return d.base+'/rapido';
   }catch(_){}
   return window.location.origin+'/rapido';   // reserva
@@ -2508,6 +2515,8 @@ async function openQrModal(){
     const ehLocalhost=/localhost|127\.0\.0\.1/.test(url);
     aviso.style.display=ehLocalhost?'':'none';
   }
+  const pub=document.getElementById('qrPublico');
+  if(pub) pub.style.display=_ehLinkPublico?'':'none';
 }
 function imprimirQr(){
   const img=document.querySelector('#qrArea img, #qrArea canvas');

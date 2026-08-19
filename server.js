@@ -747,7 +747,16 @@ app.get('/api/endereco-lan', (req, res) => {
     if (ip && /^192\.168\./.test(ip)) break;
   }
   const porta = String(PORT);
-  res.json({ ip, porta, base: ip ? `http://${ip}:${porta}` : null });
+  // URL pública (túnel), quando existir — gravada pelo vigia_pecas.js.
+  let publica = null;
+  try {
+    const fs2 = require('fs');
+    const caminhos = ['C:\\BolsaoPecas\\tunnel_url.txt', require('path').join(DATA_DIR, 'tunnel_url.txt')];
+    for (const c of caminhos) {
+      if (fs2.existsSync(c)) { const v = fs2.readFileSync(c, 'utf-8').trim(); if (v) { publica = v; break; } }
+    }
+  } catch (_) {}
+  res.json({ ip, porta, base: ip ? `http://${ip}:${porta}` : null, publica });
 });
 
 // ─── EDITAR MOVIMENTAÇÃO (admin) ──────────────────────────────────────────────
